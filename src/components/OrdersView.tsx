@@ -3,7 +3,11 @@ import {
   Search,
   ShoppingCart,
   PackagePlus,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Clock,
+  User,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Order } from '../types';
@@ -57,11 +61,11 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onOpenPos }) => 
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 py-3">
+    <div className="max-w-[1600px] mx-auto px-3 sm:px-4 py-3">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
-        <div className="flex items-center gap-6 flex-1">
-          <h1 className="text-lg font-bold text-slate-900 w-[210px] shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-6 flex-1">
+          <h1 className="text-lg font-bold text-slate-900 md:w-[210px] shrink-0">
             Đơn hàng & Nhập kho
           </h1>
 
@@ -72,43 +76,65 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onOpenPos }) => 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Theo mã hóa đơn, khách hàng, nhân viên"
-              className="w-full bg-white border border-slate-300 focus:border-[#0070F4] rounded-md pl-9 pr-4 py-1.5 text-xs outline-none shadow-sm"
+              className="w-full min-h-[44px] md:min-h-0 bg-white border border-slate-300 focus:border-[#0070F4] rounded-md pl-9 pr-4 py-2 md:py-1.5 text-base md:text-xs outline-none shadow-sm"
             />
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="grid grid-cols-2 sm:flex items-center gap-2">
           <button
             type="button"
             onClick={() => onOpenPos('sale')}
-            className="inline-flex items-center gap-1.5 bg-[#0070F4] hover:bg-[#005FD1] text-white text-xs font-semibold px-3.5 py-1.5 rounded-md shadow-sm transition-colors"
+            className="min-h-[44px] md:min-h-0 justify-center inline-flex items-center gap-1.5 bg-[#0070F4] hover:bg-[#005FD1] text-white text-xs font-semibold px-3.5 py-1.5 rounded-md shadow-sm transition-colors"
           >
             <ShoppingCart className="w-3.5 h-3.5" />
-            <span>+ Tạo đơn bán hàng</span>
+            <span>+ Tạo đơn bán</span>
           </button>
           <button
             type="button"
             onClick={() => onOpenPos('import')}
-            className="inline-flex items-center gap-1.5 bg-white hover:bg-blue-50 text-[#0070F4] border border-[#0070F4] text-xs font-semibold px-3.5 py-1.5 rounded-md shadow-sm transition-colors"
+            className="min-h-[44px] md:min-h-0 justify-center inline-flex items-center gap-1.5 bg-white hover:bg-blue-50 text-[#0070F4] border border-[#0070F4] text-xs font-semibold px-3.5 py-1.5 rounded-md shadow-sm transition-colors"
           >
             <PackagePlus className="w-3.5 h-3.5" />
-            <span>+ Nhập hàng vào kho</span>
+            <span>+ Nhập kho</span>
           </button>
           <button
             type="button"
             onClick={handleExportOrders}
-            className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-medium px-3 py-1.5 rounded-md shadow-sm"
+            className="col-span-2 sm:col-span-1 min-h-[44px] md:min-h-0 justify-center inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-medium px-3 py-1.5 rounded-md shadow-sm"
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-slate-600" />
-            <span>Xuất file</span>
+            <span>Xuất file Excel</span>
           </button>
         </div>
       </div>
 
+      {/* Mobile Quick Type Filter Pills (<1024px) */}
+      <div className="lg:hidden flex items-center gap-2 mb-3 overflow-x-auto no-scrollbar">
+        {[
+          { id: 'all', label: 'Tất cả giao dịch' },
+          { id: 'sale', label: 'Hóa đơn bán hàng' },
+          { id: 'import', label: 'Phiếu nhập kho' }
+        ].map((opt) => (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => setTypeFilter(opt.id as any)}
+            className={`min-h-[38px] px-3.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-colors ${
+              typeFilter === opt.id
+                ? 'bg-[#0070F4] text-white border-[#0070F4]'
+                : 'bg-white text-slate-600 border-slate-300'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
       {/* Main Layout */}
       <div className="flex flex-col lg:flex-row gap-3 items-start">
-        {/* Left Sidebar */}
-        <aside className="w-full lg:w-[225px] shrink-0 text-xs">
+        {/* Desktop Left Sidebar */}
+        <aside className="hidden lg:block w-[225px] shrink-0 text-xs">
           <div className="bg-white rounded-lg shadow-sm border border-slate-200/90 p-3 space-y-4">
             <div>
               <div className="font-bold text-slate-800 mb-2">Loại chứng từ</div>
@@ -137,9 +163,99 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onOpenPos }) => 
           </div>
         </aside>
 
-        {/* Table */}
+        {/* Right Main Content Area */}
         <div className="flex-1 w-full bg-white rounded-lg shadow-sm border border-slate-200/90 overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* 1. MOBILE CARD LIST VIEW (<768px: md:hidden) */}
+          <div className="md:hidden divide-y divide-slate-200">
+            <div className="bg-[#EBF3FF] px-3.5 py-2.5 flex items-center justify-between text-xs">
+              <span>
+                Tổng số: <b className="text-slate-900">{filteredOrders.length} chứng từ</b>
+              </span>
+              <span>
+                Tổng giá trị: <b className="text-[#0070F4] text-sm">{formatNumber(totalFinal)} đ</b>
+              </span>
+            </div>
+
+            {filteredOrders.map((order) => {
+              const isExpanded = expandedId === order.id;
+              return (
+                <div
+                  key={order.id}
+                  onClick={() => setExpandedId(isExpanded ? null : order.id)}
+                  className={`p-3.5 transition-colors ${
+                    isExpanded ? 'bg-blue-50/40' : 'bg-white active:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-[#0070F4] text-sm">
+                        {order.code}
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                          order.order_type === 'sale'
+                            ? 'bg-blue-50 text-[#0070F4]'
+                            : 'bg-emerald-50 text-emerald-700'
+                        }`}
+                      >
+                        {order.order_type === 'sale' ? 'Bán hàng' : 'Nhập kho'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-400">
+                      <span className="text-sm font-extrabold text-slate-900">
+                        {formatNumber(order.final_amount)} đ
+                      </span>
+                      {isExpanded ? (
+                        <ChevronUp className="w-4 h-4" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" />
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
+                    <span className="flex items-center gap-1 font-medium text-slate-800">
+                      <User className="w-3.5 h-3.5 text-slate-400" />
+                      {order.customer_name}
+                    </span>
+                    <span className="flex items-center gap-1 text-[11px] text-slate-400">
+                      <Clock className="w-3 h-3" />
+                      {order.created_at}
+                    </span>
+                  </div>
+
+                  {isExpanded && order.items && (
+                    <div className="mt-3 pt-2.5 border-t border-blue-200 space-y-2 text-xs">
+                      <div className="font-bold text-slate-700">
+                        Chi tiết mặt hàng ({order.items.length}):
+                      </div>
+                      {order.items.map((it, idx) => (
+                        <div
+                          key={idx}
+                          className="bg-white p-2 rounded border border-slate-200 flex items-center justify-between gap-2"
+                        >
+                          <div className="min-w-0">
+                            <div className="font-semibold text-slate-800 truncate">
+                              {it.product_name}
+                            </div>
+                            <div className="text-[11px] text-slate-500">
+                              {it.product_code} • {it.quantity} x {formatNumber(it.unit_price)}
+                            </div>
+                          </div>
+                          <div className="font-bold text-[#0070F4] shrink-0">
+                            {formatNumber(it.subtotal)} đ
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 2. DESKTOP TABLE VIEW (Unchanged on >=768px: hidden md:block) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-xs text-left border-collapse">
               <thead>
                 <tr className="bg-[#EBF3FF] text-slate-800 font-semibold border-b border-slate-200">

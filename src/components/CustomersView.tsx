@@ -16,7 +16,10 @@ import {
   X,
   Check,
   FileDown,
-  UserCheck
+  UserCheck,
+  Filter,
+  Phone,
+  MapPin
 } from 'lucide-react';
 import { Customer, CustomerGroup } from '../types';
 import { formatNumber } from '../utils/format';
@@ -48,6 +51,9 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
   const [salesTimeMode, setSalesTimeMode] = useState<'all' | 'custom'>('all');
   const [debtFrom, setDebtFrom] = useState('');
   const [debtTo, setDebtTo] = useState('');
+
+  // Mobile Filter Drawer state
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   // Table states
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -267,14 +273,282 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     );
   };
 
+  const renderFilterContent = () => (
+    <div className="space-y-4 text-xs">
+      {/* Nhóm khách hàng */}
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="font-bold text-slate-800">Nhóm khách hàng</span>
+          <button
+            type="button"
+            onClick={() => setIsGroupModalOpen(true)}
+            className="text-[#0070F4] hover:underline font-medium text-[11px]"
+          >
+            Tạo mới
+          </button>
+        </div>
+        <select
+          value={selectedGroup}
+          onChange={(e) => setSelectedGroup(e.target.value)}
+          className="w-full min-h-[42px] md:min-h-0 border border-slate-300 rounded px-2.5 py-1.5 text-base md:text-xs text-slate-700 bg-white outline-none focus:border-[#0070F4]"
+        >
+          <option value="">Tất cả các nhóm</option>
+          {customerGroups.map((grp) => (
+            <option key={grp.id} value={grp.name}>
+              {grp.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Ngày tạo */}
+      <div className="pt-2 border-t border-slate-100 space-y-1.5">
+        <div className="font-bold text-slate-800">Ngày tạo</div>
+        <label
+          onClick={() => setCreatedDateMode('all')}
+          className="flex items-center justify-between border border-slate-200 rounded px-2.5 py-2 md:py-1.5 cursor-pointer hover:bg-slate-50"
+        >
+          <span className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={createdDateMode === 'all'}
+              onChange={() => setCreatedDateMode('all')}
+              className="text-[#0070F4]"
+            />
+            <span>Toàn thời gian</span>
+          </span>
+          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+        </label>
+        <label
+          onClick={() => setCreatedDateMode('custom')}
+          className="flex items-center justify-between border border-slate-200 rounded px-2.5 py-2 md:py-1.5 cursor-pointer hover:bg-slate-50"
+        >
+          <span className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={createdDateMode === 'custom'}
+              onChange={() => setCreatedDateMode('custom')}
+              className="text-[#0070F4]"
+            />
+            <span>Tùy chỉnh</span>
+          </span>
+          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+        </label>
+      </div>
+
+      {/* Người tạo */}
+      <div className="pt-2 border-t border-slate-100">
+        <div className="font-bold text-slate-800 mb-1.5">Người tạo</div>
+        <input
+          type="text"
+          value={creatorFilter}
+          onChange={(e) => setCreatorFilter(e.target.value)}
+          placeholder="Chọn người tạo"
+          className="w-full min-h-[42px] md:min-h-0 border border-slate-300 rounded px-2.5 py-1.5 text-base md:text-xs outline-none focus:border-[#0070F4]"
+        />
+      </div>
+
+      {/* Loại khách hàng */}
+      <div className="pt-2 border-t border-slate-100">
+        <div className="font-bold text-slate-800 mb-1.5">Loại khách hàng</div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {[
+            { id: 'all', label: 'Tất cả' },
+            { id: 'Cá nhân', label: 'Cá nhân' },
+            { id: 'Công ty', label: 'Công ty' },
+          ].map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setCustomerTypeFilter(opt.id as any)}
+              className={`min-h-[36px] md:min-h-0 px-3 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+                customerTypeFilter === opt.id
+                  ? 'bg-[#0070F4] text-white border-[#0070F4]'
+                  : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Giới tính */}
+      <div className="pt-2 border-t border-slate-100">
+        <div className="font-bold text-slate-800 mb-1.5">Giới tính</div>
+        <div className="flex items-center gap-1.5">
+          {[
+            { id: 'all', label: 'Tất cả' },
+            { id: 'Nam', label: 'Nam' },
+            { id: 'Nữ', label: 'Nữ' },
+          ].map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setGenderFilter(opt.id as any)}
+              className={`min-h-[36px] md:min-h-0 px-3 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+                genderFilter === opt.id
+                  ? 'bg-[#0070F4] text-white border-[#0070F4]'
+                  : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Sinh nhật */}
+      <div className="pt-2 border-t border-slate-100 space-y-1.5">
+        <div className="font-bold text-slate-800">Sinh nhật</div>
+        <label
+          onClick={() => setBirthdayMode('all')}
+          className="flex items-center justify-between border border-slate-200 rounded px-2.5 py-2 md:py-1.5 cursor-pointer hover:bg-slate-50"
+        >
+          <span className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={birthdayMode === 'all'}
+              onChange={() => setBirthdayMode('all')}
+              className="text-[#0070F4]"
+            />
+            <span>Toàn thời gian</span>
+          </span>
+          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+        </label>
+        <label
+          onClick={() => setBirthdayMode('custom')}
+          className="flex items-center justify-between border border-slate-200 rounded px-2.5 py-2 md:py-1.5 cursor-pointer hover:bg-slate-50"
+        >
+          <span className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={birthdayMode === 'custom'}
+              onChange={() => setBirthdayMode('custom')}
+              className="text-[#0070F4]"
+            />
+            <span>Tùy chỉnh</span>
+          </span>
+          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+        </label>
+      </div>
+
+      {/* Ngày giao dịch cuối */}
+      <div className="pt-2 border-t border-slate-100 space-y-1.5">
+        <div className="font-bold text-slate-800">Ngày giao dịch cuối</div>
+        <label
+          onClick={() => setLastTransMode('all')}
+          className="flex items-center justify-between border border-slate-200 rounded px-2.5 py-2 md:py-1.5 cursor-pointer hover:bg-slate-50"
+        >
+          <span className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={lastTransMode === 'all'}
+              onChange={() => setLastTransMode('all')}
+              className="text-[#0070F4]"
+            />
+            <span>Toàn thời gian</span>
+          </span>
+          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+        </label>
+        <label
+          onClick={() => setLastTransMode('custom')}
+          className="flex items-center justify-between border border-slate-200 rounded px-2.5 py-2 md:py-1.5 cursor-pointer hover:bg-slate-50"
+        >
+          <span className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={lastTransMode === 'custom'}
+              onChange={() => setLastTransMode('custom')}
+              className="text-[#0070F4]"
+            />
+            <span>Tùy chỉnh</span>
+          </span>
+          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+        </label>
+      </div>
+
+      {/* Tổng bán */}
+      <div className="pt-2 border-t border-slate-100 space-y-1.5">
+        <div className="font-bold text-slate-800">Tổng bán</div>
+        <div className="text-[11px] text-slate-400">Giá trị</div>
+        <div className="flex items-center border border-slate-300 rounded overflow-hidden">
+          <span className="bg-slate-50 px-2 py-2 md:py-1 text-[11px] text-slate-500 border-r border-slate-200 w-10">
+            Từ
+          </span>
+          <input
+            type="number"
+            value={salesFrom}
+            onChange={(e) => setSalesFrom(e.target.value)}
+            placeholder="Nhập giá trị"
+            className="w-full px-2 py-1.5 md:py-1 text-base md:text-xs outline-none"
+          />
+        </div>
+        <div className="flex items-center border border-slate-300 rounded overflow-hidden">
+          <span className="bg-slate-50 px-2 py-2 md:py-1 text-[11px] text-slate-500 border-r border-slate-200 w-10">
+            Tới
+          </span>
+          <input
+            type="number"
+            value={salesTo}
+            onChange={(e) => setSalesTo(e.target.value)}
+            placeholder="Nhập giá trị"
+            className="w-full px-2 py-1.5 md:py-1 text-base md:text-xs outline-none"
+          />
+        </div>
+      </div>
+
+      {/* Nợ hiện tại */}
+      <div className="pt-2 border-t border-slate-100 space-y-1.5">
+        <div className="font-bold text-slate-800">Nợ hiện tại</div>
+        <div className="flex items-center border border-slate-300 rounded overflow-hidden">
+          <span className="bg-slate-50 px-2 py-2 md:py-1 text-[11px] text-slate-500 border-r border-slate-200 w-10">
+            Từ
+          </span>
+          <input
+            type="number"
+            value={debtFrom}
+            onChange={(e) => setDebtFrom(e.target.value)}
+            placeholder="Nhập giá trị"
+            className="w-full px-2 py-1.5 md:py-1 text-base md:text-xs outline-none"
+          />
+        </div>
+        <div className="flex items-center border border-slate-300 rounded overflow-hidden">
+          <span className="bg-slate-50 px-2 py-2 md:py-1 text-[11px] text-slate-500 border-r border-slate-200 w-10">
+            Tới
+          </span>
+          <input
+            type="number"
+            value={debtTo}
+            onChange={(e) => setDebtTo(e.target.value)}
+            placeholder="Nhập giá trị"
+            className="w-full px-2 py-1.5 md:py-1 text-base md:text-xs outline-none"
+          />
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="max-w-[1600px] mx-auto px-4 py-3">
+    <div className="max-w-[1600px] mx-auto px-3 sm:px-4 py-3">
       {/* Top Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
-        <div className="flex items-center gap-6 flex-1">
-          <h1 className="text-lg font-bold text-slate-900 w-[210px] shrink-0">
-            Khách hàng
-          </h1>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-6 flex-1">
+          <div className="flex items-center justify-between">
+            <h1 className="text-lg font-bold text-slate-900 md:w-[210px] shrink-0">
+              Khách hàng
+            </h1>
+
+            {/* Mobile Filter Drawer Button (<1024px) */}
+            <button
+              type="button"
+              onClick={() => setIsFilterDrawerOpen(true)}
+              className="lg:hidden min-h-[44px] px-3.5 rounded-md bg-white border border-slate-300 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-sm active:scale-95"
+            >
+              <Filter className="w-4 h-4 text-[#0070F4]" />
+              <span>Bộ lọc</span>
+            </button>
+          </div>
 
           {/* Search Box */}
           <div className="relative flex-1 max-w-md">
@@ -284,19 +558,19 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Theo mã, tên, số điện thoại"
-              className="w-full bg-white border border-slate-300 focus:border-[#0070F4] rounded-md pl-9 pr-8 py-1.5 text-xs text-slate-800 outline-none shadow-sm transition-colors"
+              className="w-full min-h-[44px] md:min-h-0 bg-white border border-slate-300 focus:border-[#0070F4] rounded-md pl-9 pr-8 py-2 md:py-1.5 text-base md:text-xs text-slate-800 outline-none shadow-sm transition-colors"
             />
             <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
           </div>
         </div>
 
         {/* Right Action Buttons */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="grid grid-cols-3 sm:flex items-center gap-2">
           {selectedIds.length > 0 && (
             <button
               type="button"
               onClick={handleBulkDelete}
-              className="inline-flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-semibold px-3 py-1.5 rounded-md transition-colors"
+              className="col-span-3 sm:col-span-1 min-h-[44px] md:min-h-0 justify-center inline-flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-semibold px-3 py-1.5 rounded-md transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>Xóa ({selectedIds.length})</span>
@@ -306,7 +580,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
           <button
             type="button"
             onClick={openCreateModal}
-            className="inline-flex items-center gap-1.5 bg-white hover:bg-blue-50 text-[#0070F4] border border-[#0070F4] text-xs font-semibold px-3 py-1.5 rounded-md shadow-sm transition-colors"
+            className="min-h-[44px] md:min-h-0 justify-center inline-flex items-center gap-1.5 bg-[#0070F4] md:bg-white hover:bg-blue-50 text-white md:text-[#0070F4] border border-[#0070F4] text-xs font-semibold px-3 py-1.5 rounded-md shadow-sm transition-colors"
           >
             <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
             <span>Khách hàng</span>
@@ -315,7 +589,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
           <button
             type="button"
             onClick={onOpenImport}
-            className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-medium px-3 py-1.5 rounded-md shadow-sm transition-colors"
+            className="min-h-[44px] md:min-h-0 justify-center inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-medium px-3 py-1.5 rounded-md shadow-sm transition-colors"
           >
             <FileUp className="w-3.5 h-3.5 text-slate-600" />
             <span>Import file</span>
@@ -324,7 +598,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
           <button
             type="button"
             onClick={handleExportExcel}
-            className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-medium px-3 py-1.5 rounded-md shadow-sm transition-colors"
+            className="min-h-[44px] md:min-h-0 justify-center inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-medium px-3 py-1.5 rounded-md shadow-sm transition-colors"
             title="Xuất danh sách khách hàng ra Excel"
           >
             <FileDown className="w-3.5 h-3.5 text-slate-600" />
@@ -334,326 +608,215 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
           <button
             type="button"
             onClick={handleExportExcel}
-            className="p-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-300 rounded-md shadow-sm"
+            className="hidden md:inline-flex p-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-300 rounded-md shadow-sm"
             title="Tùy chọn thêm"
           >
             <MoreHorizontal className="w-4 h-4" />
           </button>
           <button
             type="button"
-            className="p-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-300 rounded-md shadow-sm"
+            className="hidden md:inline-flex p-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-300 rounded-md shadow-sm"
           >
             <LayoutGrid className="w-4 h-4" />
           </button>
           <button
             type="button"
-            className="p-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-300 rounded-md shadow-sm"
+            className="hidden md:inline-flex p-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-300 rounded-md shadow-sm"
           >
             <Settings className="w-4 h-4" />
           </button>
           <button
             type="button"
-            className="p-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-300 rounded-md shadow-sm"
+            className="hidden md:inline-flex p-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-300 rounded-md shadow-sm"
           >
             <HelpCircle className="w-4 h-4" />
           </button>
         </div>
       </div>
 
+      {/* Mobile Slide-Over Filter Drawer (<1024px) */}
+      {isFilterDrawerOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          <div
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-[1px]"
+            onClick={() => setIsFilterDrawerOpen(false)}
+          />
+          <div className="relative z-10 w-[85vw] max-w-[320px] bg-white h-full flex flex-col shadow-2xl">
+            <div className="px-4 py-3.5 bg-[#0070F4] text-white flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold text-sm">
+                <Filter className="w-4 h-4" />
+                <span>Bộ lọc Khách hàng</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsFilterDrawerOpen(false)}
+                className="p-1 text-white/80 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {renderFilterContent()}
+            </div>
+            <div className="p-3 bg-slate-50 border-t border-slate-200 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedGroup('');
+                  setCreatorFilter('');
+                  setCustomerTypeFilter('all');
+                  setGenderFilter('all');
+                  setSalesFrom('');
+                  setSalesTo('');
+                  setDebtFrom('');
+                  setDebtTo('');
+                }}
+                className="min-h-[44px] rounded-md border border-slate-300 bg-white text-slate-700 font-semibold text-xs"
+              >
+                Đặt lại
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsFilterDrawerOpen(false)}
+                className="min-h-[44px] rounded-md bg-[#0070F4] text-white font-bold text-xs"
+              >
+                Áp dụng ({filteredCustomers.length})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main 2-Column Layout */}
       <div className="flex flex-col lg:flex-row gap-3 items-start">
-        {/* Left Sidebar Filters (Exact match with Screenshot 4) */}
-        <aside className="w-full lg:w-[225px] shrink-0 space-y-2.5 text-xs">
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200/90 p-3 space-y-4">
-            {/* Nhóm khách hàng */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="font-bold text-slate-800">Nhóm khách hàng</span>
-                <button
-                  type="button"
-                  onClick={() => setIsGroupModalOpen(true)}
-                  className="text-[#0070F4] hover:underline font-medium text-[11px]"
-                >
-                  Tạo mới
-                </button>
-              </div>
-              <select
-                value={selectedGroup}
-                onChange={(e) => setSelectedGroup(e.target.value)}
-                className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-700 bg-white outline-none focus:border-[#0070F4]"
-              >
-                <option value="">Tất cả các nhóm</option>
-                {customerGroups.map((grp) => (
-                  <option key={grp.id} value={grp.name}>
-                    {grp.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Ngày tạo */}
-            <div className="pt-2 border-t border-slate-100 space-y-1.5">
-              <div className="font-bold text-slate-800">Ngày tạo</div>
-              <label
-                onClick={() => setCreatedDateMode('all')}
-                className="flex items-center justify-between border border-slate-200 rounded px-2.5 py-1.5 cursor-pointer hover:bg-slate-50"
-              >
-                <span className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    checked={createdDateMode === 'all'}
-                    onChange={() => setCreatedDateMode('all')}
-                    className="text-[#0070F4]"
-                  />
-                  <span>Toàn thời gian</span>
-                </span>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-              </label>
-              <label
-                onClick={() => setCreatedDateMode('custom')}
-                className="flex items-center justify-between border border-slate-200 rounded px-2.5 py-1.5 cursor-pointer hover:bg-slate-50"
-              >
-                <span className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    checked={createdDateMode === 'custom'}
-                    onChange={() => setCreatedDateMode('custom')}
-                    className="text-[#0070F4]"
-                  />
-                  <span>Tùy chỉnh</span>
-                </span>
-                <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              </label>
-            </div>
-
-            {/* Người tạo */}
-            <div className="pt-2 border-t border-slate-100">
-              <div className="font-bold text-slate-800 mb-1.5">Người tạo</div>
-              <input
-                type="text"
-                value={creatorFilter}
-                onChange={(e) => setCreatorFilter(e.target.value)}
-                placeholder="Chọn người tạo"
-                className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs outline-none focus:border-[#0070F4]"
-              />
-            </div>
-
-            {/* Loại khách hàng */}
-            <div className="pt-2 border-t border-slate-100">
-              <div className="font-bold text-slate-800 mb-1.5">Loại khách hàng</div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                {[
-                  { id: 'all', label: 'Tất cả' },
-                  { id: 'Cá nhân', label: 'Cá nhân' },
-                  { id: 'Công ty', label: 'Công ty' },
-                ].map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => setCustomerTypeFilter(opt.id as any)}
-                    className={`px-3 py-1 rounded-full text-[11px] font-medium border transition-colors ${
-                      customerTypeFilter === opt.id
-                        ? 'bg-[#0070F4] text-white border-[#0070F4]'
-                        : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Giới tính */}
-            <div className="pt-2 border-t border-slate-100">
-              <div className="font-bold text-slate-800 mb-1.5">Giới tính</div>
-              <div className="flex items-center gap-1.5">
-                {[
-                  { id: 'all', label: 'Tất cả' },
-                  { id: 'Nam', label: 'Nam' },
-                  { id: 'Nữ', label: 'Nữ' },
-                ].map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => setGenderFilter(opt.id as any)}
-                    className={`px-3 py-1 rounded-full text-[11px] font-medium border transition-colors ${
-                      genderFilter === opt.id
-                        ? 'bg-[#0070F4] text-white border-[#0070F4]'
-                        : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Sinh nhật */}
-            <div className="pt-2 border-t border-slate-100 space-y-1.5">
-              <div className="font-bold text-slate-800">Sinh nhật</div>
-              <label
-                onClick={() => setBirthdayMode('all')}
-                className="flex items-center justify-between border border-slate-200 rounded px-2.5 py-1.5 cursor-pointer hover:bg-slate-50"
-              >
-                <span className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    checked={birthdayMode === 'all'}
-                    onChange={() => setBirthdayMode('all')}
-                    className="text-[#0070F4]"
-                  />
-                  <span>Toàn thời gian</span>
-                </span>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-              </label>
-              <label
-                onClick={() => setBirthdayMode('custom')}
-                className="flex items-center justify-between border border-slate-200 rounded px-2.5 py-1.5 cursor-pointer hover:bg-slate-50"
-              >
-                <span className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    checked={birthdayMode === 'custom'}
-                    onChange={() => setBirthdayMode('custom')}
-                    className="text-[#0070F4]"
-                  />
-                  <span>Tùy chỉnh</span>
-                </span>
-                <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              </label>
-            </div>
-
-            {/* Ngày giao dịch cuối */}
-            <div className="pt-2 border-t border-slate-100 space-y-1.5">
-              <div className="font-bold text-slate-800">Ngày giao dịch cuối</div>
-              <label
-                onClick={() => setLastTransMode('all')}
-                className="flex items-center justify-between border border-slate-200 rounded px-2.5 py-1.5 cursor-pointer hover:bg-slate-50"
-              >
-                <span className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    checked={lastTransMode === 'all'}
-                    onChange={() => setLastTransMode('all')}
-                    className="text-[#0070F4]"
-                  />
-                  <span>Toàn thời gian</span>
-                </span>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-              </label>
-              <label
-                onClick={() => setLastTransMode('custom')}
-                className="flex items-center justify-between border border-slate-200 rounded px-2.5 py-1.5 cursor-pointer hover:bg-slate-50"
-              >
-                <span className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    checked={lastTransMode === 'custom'}
-                    onChange={() => setLastTransMode('custom')}
-                    className="text-[#0070F4]"
-                  />
-                  <span>Tùy chỉnh</span>
-                </span>
-                <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              </label>
-            </div>
-
-            {/* Tổng bán */}
-            <div className="pt-2 border-t border-slate-100 space-y-1.5">
-              <div className="font-bold text-slate-800">Tổng bán</div>
-              <div className="text-[11px] text-slate-400">Giá trị</div>
-              <div className="flex items-center border border-slate-300 rounded overflow-hidden">
-                <span className="bg-slate-50 px-2 py-1 text-[11px] text-slate-500 border-r border-slate-200 w-10">
-                  Từ
-                </span>
-                <input
-                  type="number"
-                  value={salesFrom}
-                  onChange={(e) => setSalesFrom(e.target.value)}
-                  placeholder="Nhập giá trị"
-                  className="w-full px-2 py-1 text-xs outline-none"
-                />
-              </div>
-              <div className="flex items-center border border-slate-300 rounded overflow-hidden">
-                <span className="bg-slate-50 px-2 py-1 text-[11px] text-slate-500 border-r border-slate-200 w-10">
-                  Tới
-                </span>
-                <input
-                  type="number"
-                  value={salesTo}
-                  onChange={(e) => setSalesTo(e.target.value)}
-                  placeholder="Nhập giá trị"
-                  className="w-full px-2 py-1 text-xs outline-none"
-                />
-              </div>
-
-              <div className="text-[11px] text-slate-400 pt-1">Thời gian</div>
-              <label
-                onClick={() => setSalesTimeMode('all')}
-                className="flex items-center justify-between border border-slate-200 rounded px-2.5 py-1.5 cursor-pointer hover:bg-slate-50"
-              >
-                <span className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    checked={salesTimeMode === 'all'}
-                    onChange={() => setSalesTimeMode('all')}
-                    className="text-[#0070F4]"
-                  />
-                  <span>Toàn thời gian</span>
-                </span>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-              </label>
-              <label
-                onClick={() => setSalesTimeMode('custom')}
-                className="flex items-center justify-between border border-slate-200 rounded px-2.5 py-1.5 cursor-pointer hover:bg-slate-50"
-              >
-                <span className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    checked={salesTimeMode === 'custom'}
-                    onChange={() => setSalesTimeMode('custom')}
-                    className="text-[#0070F4]"
-                  />
-                  <span>Tùy chỉnh</span>
-                </span>
-                <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              </label>
-            </div>
-
-            {/* Nợ hiện tại */}
-            <div className="pt-2 border-t border-slate-100 space-y-1.5">
-              <div className="font-bold text-slate-800">Nợ hiện tại</div>
-              <div className="flex items-center border border-slate-300 rounded overflow-hidden">
-                <span className="bg-slate-50 px-2 py-1 text-[11px] text-slate-500 border-r border-slate-200 w-10">
-                  Từ
-                </span>
-                <input
-                  type="number"
-                  value={debtFrom}
-                  onChange={(e) => setDebtFrom(e.target.value)}
-                  placeholder="Nhập giá trị"
-                  className="w-full px-2 py-1 text-xs outline-none"
-                />
-              </div>
-              <div className="flex items-center border border-slate-300 rounded overflow-hidden">
-                <span className="bg-slate-50 px-2 py-1 text-[11px] text-slate-500 border-r border-slate-200 w-10">
-                  Tới
-                </span>
-                <input
-                  type="number"
-                  value={debtTo}
-                  onChange={(e) => setDebtTo(e.target.value)}
-                  placeholder="Nhập giá trị"
-                  className="w-full px-2 py-1 text-xs outline-none"
-                />
-              </div>
-            </div>
+        {/* Desktop Left Sidebar Filters (Unchanged on Desktop lg:block, hidden on Mobile) */}
+        <aside className="hidden lg:block w-[225px] shrink-0 space-y-2.5 text-xs">
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200/90 p-3">
+            {renderFilterContent()}
           </div>
         </aside>
 
-        {/* Right Main Table Area */}
-        <div className="flex-1 w-full bg-white rounded-lg shadow-sm border border-slate-200/90 overflow-hidden flex flex-col min-h-[650px] justify-between">
-          <div className="overflow-x-auto">
+        {/* Right Main Content Area */}
+        <div className="flex-1 w-full bg-white rounded-lg shadow-sm border border-slate-200/90 overflow-hidden flex flex-col md:min-h-[650px] justify-between">
+          {/* 1. MOBILE CARD LIST VIEW (<768px: md:hidden) */}
+          <div className="md:hidden divide-y divide-slate-200">
+            {/* Mobile Summary Card */}
+            <div className="bg-[#EBF3FF] px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div>
+                <span className="text-slate-600">Tổng KH:</span>{' '}
+                <b className="text-slate-900">{filteredCustomers.length}</b>
+              </div>
+              <div className="flex items-center gap-4">
+                <div>
+                  <span className="text-slate-600">Nợ:</span>{' '}
+                  <b className="text-amber-600">{formatNumber(totalDebt)}</b>
+                </div>
+                <div>
+                  <span className="text-slate-600">Tổng bán:</span>{' '}
+                  <b className="text-[#0070F4] text-sm">{formatNumber(totalSales)}</b>
+                </div>
+              </div>
+            </div>
+
+            {filteredCustomers.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 text-xs">
+                Không tìm thấy khách hàng nào phù hợp.
+              </div>
+            ) : (
+              filteredCustomers.slice(0, pageSize).map((cust) => {
+                const isExpanded = expandedId === cust.id;
+                return (
+                  <div
+                    key={cust.id}
+                    onClick={() => setExpandedId(isExpanded ? null : cust.id)}
+                    className={`p-3.5 transition-colors ${
+                      isExpanded ? 'bg-blue-50/40' : 'bg-white active:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-blue-50 text-[#0070F4]">
+                            {cust.code}
+                          </span>
+                          <span className="text-[11px] font-medium text-slate-500">
+                            {cust.group_name} • {cust.customer_type}
+                          </span>
+                        </div>
+                        <h3 className="text-sm font-bold text-slate-900 mt-1">
+                          {cust.name}
+                        </h3>
+                      </div>
+                    </div>
+
+                    {/* Phone & Address */}
+                    <div className="mt-2 space-y-1 text-xs text-slate-600">
+                      {cust.phone && (
+                        <div className="flex items-center gap-1.5">
+                          <Phone className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{cust.phone}</span>
+                        </div>
+                      )}
+                      {cust.address && (
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate">{cust.address}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Financial Metrics Strip */}
+                    <div className="grid grid-cols-2 gap-2 mt-3 pt-2.5 border-t border-slate-100 text-xs">
+                      <div>
+                        <div className="text-[10px] text-slate-400 uppercase">Nợ hiện tại</div>
+                        <div
+                          className={`font-bold text-sm ${
+                            cust.current_debt > 0 ? 'text-amber-600' : 'text-slate-700'
+                          }`}
+                        >
+                          {formatNumber(cust.current_debt)} đ
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[10px] text-slate-400 uppercase">Tổng bán</div>
+                        <div className="font-bold text-[#0070F4] text-sm">
+                          {formatNumber(cust.total_sales)} đ
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Expanded Touch Actions on Mobile */}
+                    {isExpanded && (
+                      <div
+                        className="mt-3 pt-3 border-t border-blue-200 grid grid-cols-2 gap-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(cust)}
+                          className="min-h-[44px] rounded-md bg-[#0070F4] text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 shadow-sm"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                          <span>Cập nhật</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCustomer(cust.id)}
+                          className="min-h-[44px] rounded-md bg-red-50 text-red-600 border border-red-200 text-xs font-bold inline-flex items-center justify-center gap-1.5"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          <span>Xóa KH</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* 2. DESKTOP TABLE VIEW (Unchanged on >=768px: hidden md:block) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-xs text-left border-collapse">
               <thead>
                 <tr className="bg-[#EBF3FF] text-slate-800 font-semibold border-b border-slate-200">
@@ -833,22 +996,22 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
 
       {/* Add/Edit Customer Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl overflow-hidden border border-slate-200">
-            <div className="px-6 py-4 bg-[#0070F4] text-white flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200">
+            <div className="px-5 sm:px-6 py-4 bg-[#0070F4] text-white flex items-center justify-between shrink-0">
               <h3 className="text-sm font-bold">
                 {editingCustomer ? 'Cập nhật Khách hàng' : 'Thêm mới Khách hàng'}
               </h3>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-white/80 hover:text-white"
+                className="text-white/80 hover:text-white p-1"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveCustomer} className="p-6 space-y-4 text-xs">
+            <form onSubmit={handleSaveCustomer} className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs">
               {formError && (
                 <div className="p-3 rounded bg-red-50 border border-red-200 text-red-600 font-medium">
                   {formError}
@@ -865,7 +1028,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                     value={formState.code}
                     onChange={(e) => setFormState({ ...formState, code: e.target.value })}
                     placeholder="VD: KH000006"
-                    className="w-full border border-slate-300 rounded px-3 py-2 outline-none focus:border-[#0070F4]"
+                    className="w-full min-h-[44px] md:min-h-0 border border-slate-300 rounded px-3 py-2 text-base md:text-xs outline-none focus:border-[#0070F4]"
                   />
                 </div>
 
@@ -879,7 +1042,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                     value={formState.name}
                     onChange={(e) => setFormState({ ...formState, name: e.target.value })}
                     placeholder="VD: Chị Lan - Cầu Giấy"
-                    className="w-full border border-slate-300 rounded px-3 py-2 outline-none focus:border-[#0070F4]"
+                    className="w-full min-h-[44px] md:min-h-0 border border-slate-300 rounded px-3 py-2 text-base md:text-xs outline-none focus:border-[#0070F4]"
                   />
                 </div>
 
@@ -892,7 +1055,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                     value={formState.phone}
                     onChange={(e) => setFormState({ ...formState, phone: e.target.value })}
                     placeholder="0912..."
-                    className="w-full border border-slate-300 rounded px-3 py-2 outline-none focus:border-[#0070F4]"
+                    className="w-full min-h-[44px] md:min-h-0 border border-slate-300 rounded px-3 py-2 text-base md:text-xs outline-none focus:border-[#0070F4]"
                   />
                 </div>
 
@@ -903,7 +1066,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                   <select
                     value={formState.group_name}
                     onChange={(e) => setFormState({ ...formState, group_name: e.target.value })}
-                    className="w-full border border-slate-300 rounded px-3 py-2 bg-white outline-none focus:border-[#0070F4]"
+                    className="w-full min-h-[44px] md:min-h-0 border border-slate-300 rounded px-3 py-2 text-base md:text-xs bg-white outline-none focus:border-[#0070F4]"
                   >
                     {customerGroups.map((g) => (
                       <option key={g.id} value={g.name}>
@@ -921,7 +1084,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                     <select
                       value={formState.customer_type}
                       onChange={(e) => setFormState({ ...formState, customer_type: e.target.value })}
-                      className="w-1/2 border border-slate-300 rounded px-2.5 py-2 bg-white outline-none"
+                      className="w-1/2 min-h-[44px] md:min-h-0 border border-slate-300 rounded px-2.5 py-2 text-base md:text-xs bg-white outline-none"
                     >
                       <option value="Cá nhân">Cá nhân</option>
                       <option value="Công ty">Công ty</option>
@@ -929,7 +1092,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                     <select
                       value={formState.gender}
                       onChange={(e) => setFormState({ ...formState, gender: e.target.value })}
-                      className="w-1/2 border border-slate-300 rounded px-2.5 py-2 bg-white outline-none"
+                      className="w-1/2 min-h-[44px] md:min-h-0 border border-slate-300 rounded px-2.5 py-2 text-base md:text-xs bg-white outline-none"
                     >
                       <option value="Nam">Nam</option>
                       <option value="Nữ">Nữ</option>
@@ -946,7 +1109,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                     value={formState.email}
                     onChange={(e) => setFormState({ ...formState, email: e.target.value })}
                     placeholder="email@domain.com"
-                    className="w-full border border-slate-300 rounded px-3 py-2 outline-none focus:border-[#0070F4]"
+                    className="w-full min-h-[44px] md:min-h-0 border border-slate-300 rounded px-3 py-2 text-base md:text-xs outline-none focus:border-[#0070F4]"
                   />
                 </div>
 
@@ -959,7 +1122,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                     value={formState.address}
                     onChange={(e) => setFormState({ ...formState, address: e.target.value })}
                     placeholder="Số nhà, đường, quận/huyện, tỉnh/thành phố..."
-                    className="w-full border border-slate-300 rounded px-3 py-2 outline-none focus:border-[#0070F4]"
+                    className="w-full min-h-[44px] md:min-h-0 border border-slate-300 rounded px-3 py-2 text-base md:text-xs outline-none focus:border-[#0070F4]"
                   />
                 </div>
 
@@ -973,7 +1136,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                     onChange={(e) =>
                       setFormState({ ...formState, current_debt: Number(e.target.value) })
                     }
-                    className="w-full border border-slate-300 rounded px-3 py-2 outline-none focus:border-[#0070F4]"
+                    className="w-full min-h-[44px] md:min-h-0 border border-slate-300 rounded px-3 py-2 text-base md:text-xs outline-none focus:border-[#0070F4]"
                   />
                 </div>
 
@@ -992,7 +1155,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                         net_sales: val
                       });
                     }}
-                    className="w-full border border-slate-300 rounded px-3 py-2 outline-none focus:border-[#0070F4]"
+                    className="w-full min-h-[44px] md:min-h-0 border border-slate-300 rounded px-3 py-2 text-base md:text-xs outline-none focus:border-[#0070F4]"
                   />
                 </div>
               </div>
@@ -1001,13 +1164,13 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded border border-slate-300 bg-white hover:bg-slate-50 font-semibold text-slate-700"
+                  className="min-h-[44px] md:min-h-0 px-4 py-2 rounded border border-slate-300 bg-white hover:bg-slate-50 font-semibold text-slate-700"
                 >
                   Bỏ qua
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded bg-[#0070F4] hover:bg-[#005FD1] text-white font-bold flex items-center gap-1.5 shadow-sm"
+                  className="min-h-[44px] md:min-h-0 px-5 py-2 rounded bg-[#0070F4] hover:bg-[#005FD1] text-white font-bold flex items-center gap-1.5 shadow-sm"
                 >
                   <Check className="w-4 h-4" />
                   <span>Lưu khách hàng</span>
@@ -1043,20 +1206,20 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                   value={newGroupName}
                   onChange={(e) => setNewGroupName(e.target.value)}
                   placeholder="VD: Khách đại lý cấp 1"
-                  className="w-full border border-slate-300 rounded px-3 py-2 outline-none focus:border-[#0070F4]"
+                  className="w-full min-h-[44px] md:min-h-0 border border-slate-300 rounded px-3 py-2 text-base md:text-xs outline-none focus:border-[#0070F4]"
                 />
               </div>
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setIsGroupModalOpen(false)}
-                  className="px-3.5 py-1.5 rounded border border-slate-300 font-semibold text-slate-600"
+                  className="min-h-[44px] md:min-h-0 px-3.5 py-1.5 rounded border border-slate-300 font-semibold text-slate-600"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded bg-[#0070F4] text-white font-bold"
+                  className="min-h-[44px] md:min-h-0 px-4 py-1.5 rounded bg-[#0070F4] text-white font-bold"
                 >
                   Lưu
                 </button>

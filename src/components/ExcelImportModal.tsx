@@ -377,7 +377,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
             <button
               type="button"
               onClick={handleDownloadTemplate}
-              className="shrink-0 inline-flex items-center gap-1.5 bg-white hover:bg-blue-50 text-[#0070F4] border border-[#0070F4] font-semibold text-xs px-3.5 py-2 rounded-md shadow-sm transition-colors"
+              className="min-h-[44px] md:min-h-0 justify-center shrink-0 inline-flex items-center gap-1.5 bg-white hover:bg-blue-50 text-[#0070F4] border border-[#0070F4] font-semibold text-xs px-3.5 py-2 rounded-md shadow-sm transition-colors"
             >
               <Download className="w-4 h-4" />
               <span>Tải file Excel mẫu</span>
@@ -573,7 +573,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700"
+            className="min-h-[44px] md:min-h-0 px-4 py-2 rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700"
           >
             Đóng
           </button>
@@ -581,7 +581,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
             type="button"
             disabled={mappedItems.length === 0 || isImporting}
             onClick={handleExecuteImport}
-            className="px-5 py-2 rounded-md bg-[#0070F4] hover:bg-[#005FD1] disabled:bg-slate-300 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors"
+            className="min-h-[44px] md:min-h-0 px-5 py-2 rounded-md bg-[#0070F4] hover:bg-[#005FD1] disabled:bg-slate-300 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors"
           >
             {isImporting ? (
               <>

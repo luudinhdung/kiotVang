@@ -19,7 +19,8 @@ import {
   Trash2,
   Package,
   X,
-  Check
+  Check,
+  Filter
 } from 'lucide-react';
 import { Product, Category } from '../types';
 import { formatNumber } from '../utils/format';
@@ -49,6 +50,9 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
   const [directSaleFilter, setDirectSaleFilter] = useState<'all' | 'yes' | 'no'>('all');
   const [channelFilter, setChannelFilter] = useState<'all' | 'yes' | 'no'>('all');
   const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active');
+
+  // Mobile Filter Drawer state
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   // Table states
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -303,14 +307,261 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
     );
   };
 
+  const renderFilterContent = () => (
+    <div className="space-y-4 text-xs">
+      {/* Nhóm hàng */}
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="font-bold text-slate-800">Nhóm hàng</span>
+          <button
+            type="button"
+            onClick={() => setIsCatModalOpen(true)}
+            className="text-[#0070F4] hover:underline font-medium text-[11px]"
+          >
+            Tạo mới
+          </button>
+        </div>
+        <select
+          value={selectedCategory}
+          onChange={(e) => {
+            setSelectedCategory(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full min-h-[42px] md:min-h-0 border border-slate-300 rounded px-2.5 py-1.5 text-base md:text-xs text-slate-700 bg-white outline-none focus:border-[#0070F4]"
+        >
+          <option value="">Chọn nhóm hàng</option>
+          {categories.map((cat) => (
+            <option key={cat.id} value={cat.name}>
+              {cat.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Tồn kho */}
+      <div className="pt-2 border-t border-slate-100">
+        <div className="font-bold text-slate-800 mb-1">Tồn kho</div>
+        <div className="text-[11px] text-slate-400 mb-1">Tiêu chí tồn</div>
+        <select
+          value={stockFilter}
+          onChange={(e) => {
+            setStockFilter(e.target.value as any);
+            setCurrentPage(1);
+          }}
+          className="w-full min-h-[42px] md:min-h-0 border border-slate-300 rounded px-2.5 py-1.5 text-base md:text-xs text-slate-700 bg-white outline-none focus:border-[#0070F4]"
+        >
+          <option value="all">Tất cả</option>
+          <option value="in_stock">Còn hàng trong kho</option>
+          <option value="out_of_stock">Hết hàng trong kho</option>
+          <option value="below_min">Dưới định mức tồn</option>
+        </select>
+      </div>
+
+      {/* Dự kiến hết hàng */}
+      <div className="pt-2 border-t border-slate-100 space-y-1.5">
+        <div className="font-bold text-slate-800">Dự kiến hết hàng</div>
+        <label
+          onClick={() => setExpectedOutMode('all')}
+          className="flex items-center justify-between border border-slate-200 rounded px-2.5 py-2 md:py-1.5 cursor-pointer hover:bg-slate-50"
+        >
+          <span className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={expectedOutMode === 'all'}
+              onChange={() => setExpectedOutMode('all')}
+              className="text-[#0070F4]"
+            />
+            <span>Toàn thời gian</span>
+          </span>
+          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+        </label>
+        <label
+          onClick={() => setExpectedOutMode('custom')}
+          className="flex items-center justify-between border border-slate-200 rounded px-2.5 py-2 md:py-1.5 cursor-pointer hover:bg-slate-50"
+        >
+          <span className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={expectedOutMode === 'custom'}
+              onChange={() => setExpectedOutMode('custom')}
+              className="text-[#0070F4]"
+            />
+            <span>Tùy chỉnh</span>
+          </span>
+          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+        </label>
+      </div>
+
+      {/* Thời gian tạo */}
+      <div className="pt-2 border-t border-slate-100 space-y-1.5">
+        <div className="font-bold text-slate-800">Thời gian tạo</div>
+        <label
+          onClick={() => setCreatedTimeMode('all')}
+          className="flex items-center justify-between border border-slate-200 rounded px-2.5 py-2 md:py-1.5 cursor-pointer hover:bg-slate-50"
+        >
+          <span className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={createdTimeMode === 'all'}
+              onChange={() => setCreatedTimeMode('all')}
+              className="text-[#0070F4]"
+            />
+            <span>Toàn thời gian</span>
+          </span>
+          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+        </label>
+        <label
+          onClick={() => setCreatedTimeMode('custom')}
+          className="flex items-center justify-between border border-slate-200 rounded px-2.5 py-2 md:py-1.5 cursor-pointer hover:bg-slate-50"
+        >
+          <span className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={createdTimeMode === 'custom'}
+              onChange={() => setCreatedTimeMode('custom')}
+              className="text-[#0070F4]"
+            />
+            <span>Tùy chỉnh</span>
+          </span>
+          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+        </label>
+      </div>
+
+      {/* Vị trí */}
+      <div className="pt-2 border-t border-slate-100">
+        <div className="font-bold text-slate-800 mb-1.5">Vị trí</div>
+        <input
+          type="text"
+          value={locationFilter}
+          onChange={(e) => setLocationFilter(e.target.value)}
+          placeholder="Chọn vị trí"
+          className="w-full min-h-[42px] md:min-h-0 border border-slate-300 rounded px-2.5 py-1.5 text-base md:text-xs outline-none focus:border-[#0070F4]"
+        />
+      </div>
+
+      {/* Loại hàng */}
+      <div className="pt-2 border-t border-slate-100">
+        <div className="font-bold text-slate-800 mb-1.5">Loại hàng</div>
+        <input
+          type="text"
+          value={productTypeFilter}
+          onChange={(e) => setProductTypeFilter(e.target.value)}
+          placeholder="Chọn loại hàng"
+          className="w-full min-h-[42px] md:min-h-0 border border-slate-300 rounded px-2.5 py-1.5 text-base md:text-xs outline-none focus:border-[#0070F4]"
+        />
+      </div>
+
+      {/* Bảo hành, bảo trì */}
+      <div className="pt-2 border-t border-slate-100">
+        <div className="font-bold text-slate-800 mb-1.5">Bảo hành, bảo trì</div>
+        <div className="flex items-center gap-1.5">
+          {[
+            { id: 'all', label: 'Tất cả' },
+            { id: 'yes', label: 'Có' },
+            { id: 'no', label: 'Không' },
+          ].map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setWarrantyFilter(opt.id as any)}
+              className={`min-h-[36px] md:min-h-0 px-3 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+                warrantyFilter === opt.id
+                  ? 'bg-[#0070F4] text-white border-[#0070F4]'
+                  : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Bán trực tiếp */}
+      <div className="pt-2 border-t border-slate-100">
+        <div className="font-bold text-slate-800 mb-1.5">Bán trực tiếp</div>
+        <div className="flex items-center gap-1.5">
+          {[
+            { id: 'all', label: 'Tất cả' },
+            { id: 'yes', label: 'Có' },
+            { id: 'no', label: 'Không' },
+          ].map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setDirectSaleFilter(opt.id as any)}
+              className={`min-h-[36px] md:min-h-0 px-3 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+                directSaleFilter === opt.id
+                  ? 'bg-[#0070F4] text-white border-[#0070F4]'
+                  : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Liên kết kênh bán */}
+      <div className="pt-2 border-t border-slate-100">
+        <div className="font-bold text-slate-800 mb-1.5">Liên kết kênh bán</div>
+        <div className="flex items-center gap-1.5">
+          {[
+            { id: 'all', label: 'Tất cả' },
+            { id: 'yes', label: 'Có' },
+            { id: 'no', label: 'Không' },
+          ].map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setChannelFilter(opt.id as any)}
+              className={`min-h-[36px] md:min-h-0 px-3 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+                channelFilter === opt.id
+                  ? 'bg-[#0070F4] text-white border-[#0070F4]'
+                  : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Trạng thái hàng hóa */}
+      <div className="pt-2 border-t border-slate-100">
+        <div className="font-bold text-slate-800 mb-1.5">Trạng thái hàng hóa</div>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as any)}
+          className="w-full min-h-[42px] md:min-h-0 border border-slate-300 rounded px-2.5 py-1.5 text-base md:text-xs text-slate-700 bg-white outline-none focus:border-[#0070F4]"
+        >
+          <option value="active">Hàng đang kinh doanh</option>
+          <option value="inactive">Hàng ngừng kinh doanh</option>
+          <option value="all">Tất cả</option>
+        </select>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="max-w-[1600px] mx-auto px-4 py-3">
+    <div className="max-w-[1600px] mx-auto px-3 sm:px-4 py-3">
       {/* Top Bar: Title + Search + Action Buttons */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
-        <div className="flex items-center gap-6 flex-1">
-          <h1 className="text-lg font-bold text-slate-900 w-[210px] shrink-0">
-            Hàng hóa
-          </h1>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-6 flex-1">
+          <div className="flex items-center justify-between">
+            <h1 className="text-lg font-bold text-slate-900 md:w-[210px] shrink-0">
+              Hàng hóa
+            </h1>
+
+            {/* Mobile Filter Drawer Button (<1024px) */}
+            <button
+              type="button"
+              onClick={() => setIsFilterDrawerOpen(true)}
+              className="lg:hidden min-h-[44px] px-3.5 rounded-md bg-white border border-slate-300 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-sm active:scale-95"
+            >
+              <Filter className="w-4 h-4 text-[#0070F4]" />
+              <span>Bộ lọc</span>
+            </button>
+          </div>
 
           {/* Search Box */}
           <div className="relative flex-1 max-w-md">
@@ -323,19 +574,19 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                 setCurrentPage(1);
               }}
               placeholder="Theo mã, tên hàng"
-              className="w-full bg-white border border-slate-300 focus:border-[#0070F4] rounded-md pl-9 pr-8 py-1.5 text-xs text-slate-800 outline-none shadow-sm transition-colors"
+              className="w-full min-h-[44px] md:min-h-0 bg-white border border-slate-300 focus:border-[#0070F4] rounded-md pl-9 pr-8 py-2 md:py-1.5 text-base md:text-xs text-slate-800 outline-none shadow-sm transition-colors"
             />
             <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
           </div>
         </div>
 
-        {/* Right Action Buttons */}
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* Right Action Buttons (Touch-friendly min-h-[44px] on mobile, original compact on desktop) */}
+        <div className="grid grid-cols-3 sm:flex items-center gap-2">
           {selectedIds.length > 0 && (
             <button
               type="button"
               onClick={handleBulkDelete}
-              className="inline-flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-semibold px-3 py-1.5 rounded-md transition-colors"
+              className="col-span-3 sm:col-span-1 min-h-[44px] md:min-h-0 justify-center inline-flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-semibold px-3 py-1.5 rounded-md transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>Xóa ({selectedIds.length})</span>
@@ -345,7 +596,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
           <button
             type="button"
             onClick={openCreateModal}
-            className="inline-flex items-center gap-1.5 bg-white hover:bg-blue-50 text-[#0070F4] border border-[#0070F4] text-xs font-semibold px-3 py-1.5 rounded-md shadow-sm transition-colors"
+            className="min-h-[44px] md:min-h-0 justify-center inline-flex items-center gap-1.5 bg-[#0070F4] md:bg-white hover:bg-blue-50 text-white md:text-[#0070F4] border border-[#0070F4] text-xs font-semibold px-3 py-1.5 rounded-md shadow-sm transition-colors"
           >
             <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
             <span>Tạo mới</span>
@@ -354,7 +605,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
           <button
             type="button"
             onClick={onOpenImport}
-            className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-medium px-3 py-1.5 rounded-md shadow-sm transition-colors"
+            className="min-h-[44px] md:min-h-0 justify-center inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-medium px-3 py-1.5 rounded-md shadow-sm transition-colors"
           >
             <FileUp className="w-3.5 h-3.5 text-slate-600" />
             <span>Import file</span>
@@ -363,7 +614,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
           <button
             type="button"
             onClick={handleExportExcel}
-            className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-medium px-3 py-1.5 rounded-md shadow-sm transition-colors"
+            className="min-h-[44px] md:min-h-0 justify-center inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-medium px-3 py-1.5 rounded-md shadow-sm transition-colors"
           >
             <FileDown className="w-3.5 h-3.5 text-slate-600" />
             <span>Xuất file</span>
@@ -371,21 +622,21 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
 
           <button
             type="button"
-            className="p-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-300 rounded-md shadow-sm"
+            className="hidden md:inline-flex p-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-300 rounded-md shadow-sm"
             title="Tùy chọn hiển thị cột"
           >
             <LayoutGrid className="w-4 h-4" />
           </button>
           <button
             type="button"
-            className="p-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-300 rounded-md shadow-sm"
+            className="hidden md:inline-flex p-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-300 rounded-md shadow-sm"
             title="Cài đặt"
           >
             <Settings className="w-4 h-4" />
           </button>
           <button
             type="button"
-            className="p-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-300 rounded-md shadow-sm"
+            className="hidden md:inline-flex p-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-300 rounded-md shadow-sm"
             title="Trợ giúp"
           >
             <HelpCircle className="w-4 h-4" />
@@ -393,247 +644,205 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
         </div>
       </div>
 
+      {/* Mobile Slide-Over Filter Drawer (<1024px) */}
+      {isFilterDrawerOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          <div
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-[1px]"
+            onClick={() => setIsFilterDrawerOpen(false)}
+          />
+          <div className="relative z-10 w-[85vw] max-w-[320px] bg-white h-full flex flex-col shadow-2xl">
+            <div className="px-4 py-3.5 bg-[#0070F4] text-white flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold text-sm">
+                <Filter className="w-4 h-4" />
+                <span>Bộ lọc Hàng hóa</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsFilterDrawerOpen(false)}
+                className="p-1 text-white/80 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {renderFilterContent()}
+            </div>
+            <div className="p-3 bg-slate-50 border-t border-slate-200 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCategory('');
+                  setStockFilter('all');
+                  setLocationFilter('');
+                  setProductTypeFilter('');
+                  setWarrantyFilter('all');
+                  setDirectSaleFilter('all');
+                  setChannelFilter('all');
+                  setStatusFilter('active');
+                }}
+                className="min-h-[44px] rounded-md border border-slate-300 bg-white text-slate-700 font-semibold text-xs"
+              >
+                Đặt lại
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsFilterDrawerOpen(false)}
+                className="min-h-[44px] rounded-md bg-[#0070F4] text-white font-bold text-xs"
+              >
+                Áp dụng ({filteredProducts.length})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main 2-Column Layout */}
       <div className="flex flex-col lg:flex-row gap-3 items-start">
-        {/* Left Sidebar Filters (w-[225px]) */}
-        <aside className="w-full lg:w-[225px] shrink-0 space-y-2.5 text-xs">
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200/90 p-3 space-y-4">
-            {/* Nhóm hàng */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="font-bold text-slate-800">Nhóm hàng</span>
-                <button
-                  type="button"
-                  onClick={() => setIsCatModalOpen(true)}
-                  className="text-[#0070F4] hover:underline font-medium text-[11px]"
-                >
-                  Tạo mới
-                </button>
-              </div>
-              <select
-                value={selectedCategory}
-                onChange={(e) => {
-                  setSelectedCategory(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-700 bg-white outline-none focus:border-[#0070F4]"
-              >
-                <option value="">Chọn nhóm hàng</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.name}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Tồn kho */}
-            <div className="pt-2 border-t border-slate-100">
-              <div className="font-bold text-slate-800 mb-1">Tồn kho</div>
-              <div className="text-[11px] text-slate-400 mb-1">Tiêu chí tồn</div>
-              <select
-                value={stockFilter}
-                onChange={(e) => {
-                  setStockFilter(e.target.value as any);
-                  setCurrentPage(1);
-                }}
-                className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-700 bg-white outline-none focus:border-[#0070F4]"
-              >
-                <option value="all">Tất cả</option>
-                <option value="in_stock">Còn hàng trong kho</option>
-                <option value="out_of_stock">Hết hàng trong kho</option>
-                <option value="below_min">Dưới định mức tồn</option>
-              </select>
-            </div>
-
-            {/* Dự kiến hết hàng */}
-            <div className="pt-2 border-t border-slate-100 space-y-1.5">
-              <div className="font-bold text-slate-800">Dự kiến hết hàng</div>
-              <label
-                onClick={() => setExpectedOutMode('all')}
-                className="flex items-center justify-between border border-slate-200 rounded px-2.5 py-1.5 cursor-pointer hover:bg-slate-50"
-              >
-                <span className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    checked={expectedOutMode === 'all'}
-                    onChange={() => setExpectedOutMode('all')}
-                    className="text-[#0070F4]"
-                  />
-                  <span>Toàn thời gian</span>
-                </span>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-              </label>
-              <label
-                onClick={() => setExpectedOutMode('custom')}
-                className="flex items-center justify-between border border-slate-200 rounded px-2.5 py-1.5 cursor-pointer hover:bg-slate-50"
-              >
-                <span className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    checked={expectedOutMode === 'custom'}
-                    onChange={() => setExpectedOutMode('custom')}
-                    className="text-[#0070F4]"
-                  />
-                  <span>Tùy chỉnh</span>
-                </span>
-                <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              </label>
-            </div>
-
-            {/* Thời gian tạo */}
-            <div className="pt-2 border-t border-slate-100 space-y-1.5">
-              <div className="font-bold text-slate-800">Thời gian tạo</div>
-              <label
-                onClick={() => setCreatedTimeMode('all')}
-                className="flex items-center justify-between border border-slate-200 rounded px-2.5 py-1.5 cursor-pointer hover:bg-slate-50"
-              >
-                <span className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    checked={createdTimeMode === 'all'}
-                    onChange={() => setCreatedTimeMode('all')}
-                    className="text-[#0070F4]"
-                  />
-                  <span>Toàn thời gian</span>
-                </span>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-              </label>
-              <label
-                onClick={() => setCreatedTimeMode('custom')}
-                className="flex items-center justify-between border border-slate-200 rounded px-2.5 py-1.5 cursor-pointer hover:bg-slate-50"
-              >
-                <span className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    checked={createdTimeMode === 'custom'}
-                    onChange={() => setCreatedTimeMode('custom')}
-                    className="text-[#0070F4]"
-                  />
-                  <span>Tùy chỉnh</span>
-                </span>
-                <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              </label>
-            </div>
-
-            {/* Vị trí */}
-            <div className="pt-2 border-t border-slate-100">
-              <div className="font-bold text-slate-800 mb-1.5">Vị trí</div>
-              <input
-                type="text"
-                value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
-                placeholder="Chọn vị trí"
-                className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs outline-none focus:border-[#0070F4]"
-              />
-            </div>
-
-            {/* Loại hàng */}
-            <div className="pt-2 border-t border-slate-100">
-              <div className="font-bold text-slate-800 mb-1.5">Loại hàng</div>
-              <input
-                type="text"
-                value={productTypeFilter}
-                onChange={(e) => setProductTypeFilter(e.target.value)}
-                placeholder="Chọn loại hàng"
-                className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs outline-none focus:border-[#0070F4]"
-              />
-            </div>
-
-            {/* Bảo hành, bảo trì */}
-            <div className="pt-2 border-t border-slate-100">
-              <div className="font-bold text-slate-800 mb-1.5">Bảo hành, bảo trì</div>
-              <div className="flex items-center gap-1.5">
-                {[
-                  { id: 'all', label: 'Tất cả' },
-                  { id: 'yes', label: 'Có' },
-                  { id: 'no', label: 'Không' },
-                ].map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => setWarrantyFilter(opt.id as any)}
-                    className={`px-3 py-1 rounded-full text-[11px] font-medium border transition-colors ${
-                      warrantyFilter === opt.id
-                        ? 'bg-[#0070F4] text-white border-[#0070F4]'
-                        : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Bán trực tiếp */}
-            <div className="pt-2 border-t border-slate-100">
-              <div className="font-bold text-slate-800 mb-1.5">Bán trực tiếp</div>
-              <div className="flex items-center gap-1.5">
-                {[
-                  { id: 'all', label: 'Tất cả' },
-                  { id: 'yes', label: 'Có' },
-                  { id: 'no', label: 'Không' },
-                ].map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => setDirectSaleFilter(opt.id as any)}
-                    className={`px-3 py-1 rounded-full text-[11px] font-medium border transition-colors ${
-                      directSaleFilter === opt.id
-                        ? 'bg-[#0070F4] text-white border-[#0070F4]'
-                        : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Liên kết kênh bán */}
-            <div className="pt-2 border-t border-slate-100">
-              <div className="font-bold text-slate-800 mb-1.5">Liên kết kênh bán</div>
-              <div className="flex items-center gap-1.5">
-                {[
-                  { id: 'all', label: 'Tất cả' },
-                  { id: 'yes', label: 'Có' },
-                  { id: 'no', label: 'Không' },
-                ].map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => setChannelFilter(opt.id as any)}
-                    className={`px-3 py-1 rounded-full text-[11px] font-medium border transition-colors ${
-                      channelFilter === opt.id
-                        ? 'bg-[#0070F4] text-white border-[#0070F4]'
-                        : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Trạng thái hàng hóa */}
-            <div className="pt-2 border-t border-slate-100">
-              <div className="font-bold text-slate-800 mb-1.5">Trạng thái hàng hóa</div>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-700 bg-white outline-none focus:border-[#0070F4]"
-              >
-                <option value="active">Hàng đang kinh doanh</option>
-                <option value="inactive">Hàng ngừng kinh doanh</option>
-                <option value="all">Tất cả</option>
-              </select>
-            </div>
+        {/* Desktop Left Sidebar Filters (Unchanged on Desktop lg:block, hidden on Mobile) */}
+        <aside className="hidden lg:block w-[225px] shrink-0 space-y-2.5 text-xs">
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200/90 p-3">
+            {renderFilterContent()}
           </div>
         </aside>
 
-        {/* Right Main Table Area */}
+        {/* Right Main Content Area */}
         <div className="flex-1 w-full bg-white rounded-lg shadow-sm border border-slate-200/90 overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* 1. MOBILE CARD LIST VIEW (<768px: md:hidden) */}
+          <div className="md:hidden divide-y divide-slate-200">
+            {/* Mobile Summary Card */}
+            <div className="bg-[#EBF3FF] px-3.5 py-2.5 flex items-center justify-between text-xs">
+              <div>
+                <span className="text-slate-600">Danh sách:</span>{' '}
+                <b className="text-slate-900">{filteredProducts.length} mặt hàng</b>
+              </div>
+              <div className="flex items-center gap-4">
+                <div>
+                  <span className="text-slate-600">Tổng tồn:</span>{' '}
+                  <b className="text-[#0070F4] text-sm">{formatNumber(totalStock)}</b>
+                </div>
+                <div>
+                  <span className="text-slate-600">Khách đặt:</span>{' '}
+                  <b className="text-slate-900">{formatNumber(totalOrdered)}</b>
+                </div>
+              </div>
+            </div>
+
+            {paginatedProducts.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 text-xs">
+                Không tìm thấy mặt hàng nào phù hợp.
+              </div>
+            ) : (
+              paginatedProducts.map((prod) => {
+                const isExpanded = expandedId === prod.id;
+                return (
+                  <div
+                    key={prod.id}
+                    onClick={() => setExpandedId(isExpanded ? null : prod.id)}
+                    className={`p-3.5 transition-colors ${
+                      isExpanded ? 'bg-blue-50/40' : 'bg-white active:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      {prod.image_url ? (
+                        <img
+                          src={prod.image_url}
+                          alt={prod.name}
+                          className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0 bg-slate-50"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-400 shrink-0">
+                          <Package className="w-6 h-6" />
+                        </div>
+                      )}
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-blue-50 text-[#0070F4]">
+                            {prod.code}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => handleToggleStar(prod, e)}
+                            className="p-1 -mr-1"
+                          >
+                            <Star
+                              className={`w-4 h-4 ${
+                                prod.is_starred
+                                  ? 'fill-amber-400 text-amber-400'
+                                  : 'text-slate-300'
+                              }`}
+                            />
+                          </button>
+                        </div>
+
+                        <h3 className="text-sm font-bold text-slate-900 mt-1 leading-snug">
+                          {prod.name}
+                        </h3>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          {prod.category_name} • Vị trí: {prod.location}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* 3-Column Metrics Strip on Mobile Card */}
+                    <div className="grid grid-cols-3 gap-2 mt-3 pt-2.5 border-t border-slate-100 text-xs">
+                      <div>
+                        <div className="text-[10px] text-slate-400 uppercase">Giá bán</div>
+                        <div className="font-bold text-[#0070F4] text-sm">
+                          {formatNumber(prod.selling_price)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-slate-400 uppercase">Giá vốn</div>
+                        <div className="font-semibold text-slate-700 text-sm">
+                          {formatNumber(prod.cost_price)}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[10px] text-slate-400 uppercase">Tồn kho</div>
+                        <div
+                          className={`font-bold text-sm ${
+                            prod.stock > 0 ? 'text-emerald-600' : 'text-slate-500'
+                          }`}
+                        >
+                          {formatNumber(prod.stock)} {prod.unit}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Expanded Touch Actions on Mobile */}
+                    {isExpanded && (
+                      <div
+                        className="mt-3 pt-3 border-t border-blue-200 grid grid-cols-2 gap-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(prod)}
+                          className="min-h-[44px] rounded-md bg-[#0070F4] text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 shadow-sm"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                          <span>Cập nhật</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteProduct(prod.id)}
+                          className="min-h-[44px] rounded-md bg-red-50 text-red-600 border border-red-200 text-xs font-bold inline-flex items-center justify-center gap-1.5"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          <span>Xóa mặt hàng</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* 2. DESKTOP TABLE VIEW (Unchanged on >=768px: hidden md:block) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-xs text-left border-collapse">
               <thead>
                 <tr className="bg-[#EBF3FF] text-slate-800 font-semibold border-b border-slate-200">
@@ -845,7 +1054,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
 
           {/* Bottom Pagination Bar */}
           <div className="px-4 py-2.5 bg-white border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-1.5">
                 <span>Hiển thị</span>
                 <select
@@ -868,7 +1077,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                   type="button"
                   disabled={safePage <= 1}
                   onClick={() => setCurrentPage(1)}
-                  className="p-1 rounded hover:bg-slate-100 disabled:opacity-40"
+                  className="p-1.5 md:p-1 rounded hover:bg-slate-100 disabled:opacity-40"
                 >
                   <ChevronsLeft className="w-4 h-4" />
                 </button>
@@ -876,7 +1085,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                   type="button"
                   disabled={safePage <= 1}
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  className="p-1 rounded hover:bg-slate-100 disabled:opacity-40"
+                  className="p-1.5 md:p-1 rounded hover:bg-slate-100 disabled:opacity-40"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -887,7 +1096,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                   type="button"
                   disabled={safePage >= totalPages}
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  className="p-1 rounded hover:bg-slate-100 disabled:opacity-40"
+                  className="p-1.5 md:p-1 rounded hover:bg-slate-100 disabled:opacity-40"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -895,7 +1104,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                   type="button"
                   disabled={safePage >= totalPages}
                   onClick={() => setCurrentPage(totalPages)}
-                  className="p-1 rounded hover:bg-slate-100 disabled:opacity-40"
+                  className="p-1.5 md:p-1 rounded hover:bg-slate-100 disabled:opacity-40"
                 >
                   <ChevronsRight className="w-4 h-4" />
                 </button>
@@ -916,22 +1125,22 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
 
       {/* Create / Edit Product Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl overflow-hidden border border-slate-200">
-            <div className="px-6 py-4 bg-[#0070F4] text-white flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200">
+            <div className="px-5 sm:px-6 py-4 bg-[#0070F4] text-white flex items-center justify-between shrink-0">
               <h3 className="text-sm font-bold">
                 {editingProduct ? 'Cập nhật Hàng hóa' : 'Thêm mới Hàng hóa'}
               </h3>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-white/80 hover:text-white"
+                className="text-white/80 hover:text-white p-1"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveProduct} className="p-6 space-y-4 text-xs">
+            <form onSubmit={handleSaveProduct} className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs">
               {formError && (
                 <div className="p-3 rounded bg-red-50 border border-red-200 text-red-600 font-medium">
                   {formError}
@@ -948,7 +1157,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                     value={formState.code}
                     onChange={(e) => setFormState({ ...formState, code: e.target.value })}
                     placeholder="VD: PK000025"
-                    className="w-full border border-slate-300 rounded px-3 py-2 outline-none focus:border-[#0070F4]"
+                    className="w-full min-h-[44px] md:min-h-0 border border-slate-300 rounded px-3 py-2 text-base md:text-xs outline-none focus:border-[#0070F4]"
                   />
                 </div>
 
@@ -959,7 +1168,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                   <select
                     value={formState.category_name}
                     onChange={(e) => setFormState({ ...formState, category_name: e.target.value })}
-                    className="w-full border border-slate-300 rounded px-3 py-2 bg-white outline-none focus:border-[#0070F4]"
+                    className="w-full min-h-[44px] md:min-h-0 border border-slate-300 rounded px-3 py-2 text-base md:text-xs bg-white outline-none focus:border-[#0070F4]"
                   >
                     {categories.map((cat) => (
                       <option key={cat.id} value={cat.name}>
@@ -979,7 +1188,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                     value={formState.name}
                     onChange={(e) => setFormState({ ...formState, name: e.target.value })}
                     placeholder="Nhập tên mặt hàng..."
-                    className="w-full border border-slate-300 rounded px-3 py-2 outline-none focus:border-[#0070F4]"
+                    className="w-full min-h-[44px] md:min-h-0 border border-slate-300 rounded px-3 py-2 text-base md:text-xs outline-none focus:border-[#0070F4]"
                   />
                 </div>
 
@@ -994,7 +1203,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                     onChange={(e) =>
                       setFormState({ ...formState, selling_price: Number(e.target.value) })
                     }
-                    className="w-full border border-slate-300 rounded px-3 py-2 outline-none focus:border-[#0070F4]"
+                    className="w-full min-h-[44px] md:min-h-0 border border-slate-300 rounded px-3 py-2 text-base md:text-xs outline-none focus:border-[#0070F4]"
                   />
                 </div>
 
@@ -1009,7 +1218,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                     onChange={(e) =>
                       setFormState({ ...formState, cost_price: Number(e.target.value) })
                     }
-                    className="w-full border border-slate-300 rounded px-3 py-2 outline-none focus:border-[#0070F4]"
+                    className="w-full min-h-[44px] md:min-h-0 border border-slate-300 rounded px-3 py-2 text-base md:text-xs outline-none focus:border-[#0070F4]"
                   />
                 </div>
 
@@ -1024,7 +1233,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                     onChange={(e) =>
                       setFormState({ ...formState, stock: Number(e.target.value) })
                     }
-                    className="w-full border border-slate-300 rounded px-3 py-2 outline-none focus:border-[#0070F4]"
+                    className="w-full min-h-[44px] md:min-h-0 border border-slate-300 rounded px-3 py-2 text-base md:text-xs outline-none focus:border-[#0070F4]"
                   />
                 </div>
 
@@ -1038,14 +1247,14 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                       value={formState.location}
                       onChange={(e) => setFormState({ ...formState, location: e.target.value })}
                       placeholder="Kệ A1"
-                      className="w-2/3 border border-slate-300 rounded px-3 py-2 outline-none focus:border-[#0070F4]"
+                      className="w-2/3 min-h-[44px] md:min-h-0 border border-slate-300 rounded px-3 py-2 text-base md:text-xs outline-none focus:border-[#0070F4]"
                     />
                     <input
                       type="text"
                       value={formState.unit}
                       onChange={(e) => setFormState({ ...formState, unit: e.target.value })}
                       placeholder="Cái"
-                      className="w-1/3 border border-slate-300 rounded px-3 py-2 outline-none focus:border-[#0070F4]"
+                      className="w-1/3 min-h-[44px] md:min-h-0 border border-slate-300 rounded px-3 py-2 text-base md:text-xs outline-none focus:border-[#0070F4]"
                     />
                   </div>
                 </div>
@@ -1059,7 +1268,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                     value={formState.image_url}
                     onChange={(e) => setFormState({ ...formState, image_url: e.target.value })}
                     placeholder="https://..."
-                    className="w-full border border-slate-300 rounded px-3 py-2 outline-none focus:border-[#0070F4]"
+                    className="w-full min-h-[44px] md:min-h-0 border border-slate-300 rounded px-3 py-2 text-base md:text-xs outline-none focus:border-[#0070F4]"
                   />
                 </div>
 
@@ -1071,7 +1280,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                       onChange={(e) =>
                         setFormState({ ...formState, has_warranty: e.target.checked })
                       }
-                      className="rounded text-[#0070F4]"
+                      className="rounded text-[#0070F4] w-4 h-4"
                     />
                     <span className="font-medium text-slate-700">Có bảo hành, bảo trì</span>
                   </label>
@@ -1083,7 +1292,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                       onChange={(e) =>
                         setFormState({ ...formState, direct_sale: e.target.checked })
                       }
-                      className="rounded text-[#0070F4]"
+                      className="rounded text-[#0070F4] w-4 h-4"
                     />
                     <span className="font-medium text-slate-700">Bán trực tiếp</span>
                   </label>
@@ -1094,13 +1303,13 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded border border-slate-300 bg-white hover:bg-slate-50 font-semibold text-slate-700"
+                  className="min-h-[44px] md:min-h-0 px-4 py-2 rounded border border-slate-300 bg-white hover:bg-slate-50 font-semibold text-slate-700"
                 >
                   Bỏ qua
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded bg-[#0070F4] hover:bg-[#005FD1] text-white font-bold flex items-center gap-1.5 shadow-sm"
+                  className="min-h-[44px] md:min-h-0 px-5 py-2 rounded bg-[#0070F4] hover:bg-[#005FD1] text-white font-bold flex items-center gap-1.5 shadow-sm"
                 >
                   <Check className="w-4 h-4" />
                   <span>Lưu hàng hóa</span>
@@ -1136,20 +1345,20 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
                   placeholder="VD: Đồng hồ thông minh"
-                  className="w-full border border-slate-300 rounded px-3 py-2 outline-none focus:border-[#0070F4]"
+                  className="w-full min-h-[44px] md:min-h-0 border border-slate-300 rounded px-3 py-2 text-base md:text-xs outline-none focus:border-[#0070F4]"
                 />
               </div>
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setIsCatModalOpen(false)}
-                  className="px-3.5 py-1.5 rounded border border-slate-300 font-semibold text-slate-600"
+                  className="min-h-[44px] md:min-h-0 px-3.5 py-1.5 rounded border border-slate-300 font-semibold text-slate-600"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded bg-[#0070F4] text-white font-bold"
+                  className="min-h-[44px] md:min-h-0 px-4 py-1.5 rounded bg-[#0070F4] text-white font-bold"
                 >
                   Lưu
                 </button>

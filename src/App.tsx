@@ -77,7 +77,8 @@ export function App() {
         onOpenPosModal={handleOpenPos}
       />
 
-      <main className="flex-1 pb-12">
+      {/* Safe bottom padding on mobile (pb-24) so Bottom Navigation never overlaps content */}
+      <main className="flex-1 pb-24 md:pb-12">
         {activeTab === 'dashboard' && (
           <DashboardView
             data={dashboardData}
@@ -111,8 +112,8 @@ export function App() {
         )}
       </main>
 
-      {/* Floating KiotViet Support Badge (Bottom Right matching Screenshot 1) */}
-      <div className="fixed bottom-3 right-4 z-20">
+      {/* Floating KiotViet Support Badge (Desktop only so mobile bottom nav stays clean) */}
+      <div className="hidden md:block fixed bottom-3 right-4 z-20">
         <button
           type="button"
           onClick={() => handleOpenPos('sale')}
