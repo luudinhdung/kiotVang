@@ -743,7 +743,12 @@ function handleLocalApi(url: string, options?: RequestInit): Response {
 
 export function enableHybridCloudMode() {
   const originalFetch = window.fetch.bind(window);
-  let useLocalFallback = false;
+  // If running inside Capacitor Android APK (or non-local host without Express), use local DB immediately
+  const isCapacitorNative =
+    Boolean((window as any).Capacitor?.isNativePlatform?.()) ||
+    window.location.protocol === 'capacitor:' ||
+    (window.location.hostname === 'localhost' && !window.location.port);
+  let useLocalFallback = isCapacitorNative;
 
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.pathname : input.url;
