@@ -10,6 +10,20 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+  .ios-safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .ios-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+/* iOS Touch & Smooth Scrolling Optimizations */
+html,
+body {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  overscroll-behavior-y: none;
 }
 
 /* Prevent iOS Safari auto-zoom on form inputs on mobile (<768px) while preserving desktop font sizes */
