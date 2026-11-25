@@ -57,7 +57,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onOpenPos }) => 
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'DonHang');
-    XLSX.writeFile(wb, 'Danh_Sach_Don_Hang_KiotViet.xlsx');
+    XLSX.writeFile(wb, 'Danh_Sach_Don_Hang_KiotVang.xlsx');
   };
 
   return (

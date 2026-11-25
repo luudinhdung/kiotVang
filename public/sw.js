@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kiotviet-ios-pwa-v2';
+const CACHE_NAME = 'kiotvang-ios-pwa-v3';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

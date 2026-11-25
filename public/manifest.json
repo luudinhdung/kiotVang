@@ -1,7 +1,7 @@
 {
-  "name": "KiotViet - Quản lý Bán hàng & Kho",
-  "short_name": "KiotViet",
-  "description": "Ứng dụng Quản lý Bán hàng, Hàng hóa, Tồn kho và Khách hàng chuẩn KiotViet",
+  "name": "KiotVạng - Quản lý Bán hàng & Kho",
+  "short_name": "KiotVạng",
+  "description": "Ứng dụng Quản lý Bán hàng, Hàng hóa, Tồn kho và Khách hàng KiotVạng",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

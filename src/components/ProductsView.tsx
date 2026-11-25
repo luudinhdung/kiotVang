@@ -289,7 +289,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
     const ws = XLSX.utils.json_to_sheet(exportRows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'HangHoa');
-    XLSX.writeFile(wb, 'Danh_Sach_Hang_Hoa_KiotViet.xlsx');
+    XLSX.writeFile(wb, 'Danh_Sach_Hang_Hoa_KiotVang.xlsx');
   };
 
   const toggleSelectAll = () => {

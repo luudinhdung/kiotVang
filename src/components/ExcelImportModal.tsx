@@ -258,7 +258,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
       const ws = XLSX.utils.json_to_sheet(sampleData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'DanhSachHangHoa');
-      XLSX.writeFile(wb, 'Mau_Import_Hang_Hoa_KiotViet.xlsx');
+      XLSX.writeFile(wb, 'Mau_Import_Hang_Hoa_KiotVang.xlsx');
     } else {
       const sampleData = [
         {
@@ -291,7 +291,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
       const ws = XLSX.utils.json_to_sheet(sampleData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'DanhSachKhachHang');
-      XLSX.writeFile(wb, 'Mau_Import_Khach_Hang_KiotViet.xlsx');
+      XLSX.writeFile(wb, 'Mau_Import_Khach_Hang_KiotVang.xlsx');
     }
   };
 

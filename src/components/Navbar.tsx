@@ -83,7 +83,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </span>
             </div>
             <span className="text-[18px] font-extrabold tracking-tight text-[#0055B8]">
-              Kiot<span className="text-[#0070F4]">Viet</span>
+              Kiot<span className="text-[#0070F4]">Vạng</span>
             </span>
           </div>
 
@@ -275,7 +275,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="flex items-center gap-2.5">
                 <Smartphone className="w-5 h-5" />
                 <h3 className="text-sm font-bold">
-                  Cài đặt App KiotViet lên màn hình iPhone (iOS)
+                  Cài đặt App KiotVạng lên màn hình iPhone (iOS)
                 </h3>
               </div>
               <button
@@ -324,7 +324,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-start gap-2.5 text-emerald-800">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                 <div className="text-[11.5px] leading-snug">
-                  <b>Hoàn tất!</b> App <b>KiotViet</b> sẽ xuất hiện ngay ngoài màn hình chính iPhone với logo riêng, mở lên toàn màn hình 100% không có thanh địa chỉ và tự động cập nhật mỗi khi bạn sửa code!
+                  <b>Hoàn tất!</b> App <b>KiotVạng</b> sẽ xuất hiện ngay ngoài màn hình chính iPhone với logo riêng, mở lên toàn màn hình 100% không có thanh địa chỉ và tự động cập nhật mỗi khi bạn sửa code!
                 </div>
               </div>
 

@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">KiotViet Quản Lý</string>
-    <string name="title_activity_main">KiotViet Quản Lý</string>
+    <string name="app_name">KiotVạng</string>
+    <string name="title_activity_main">KiotVạng</string>
     <string name="package_name">com.kiotvang.manager</string>
     <string name="custom_url_scheme">com.kiotvang.manager</string>
 </resources>

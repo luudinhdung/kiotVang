@@ -1,6 +1,6 @@
 {
   "appId": "com.kiotvang.manager",
-  "appName": "KiotViet Quản Lý",
+  "appName": "KiotVạng",
   "webDir": "dist",
   "bundledWebRuntime": false,
   "server": {

@@ -44,7 +44,7 @@ export function createApiMiddleware() {
 
       const vsYesterdayPct = yesterdayRevenue > 0
         ? Number((((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100).toFixed(2))
-        : 9.14;
+        : 0;
 
       // Group by day of month (01 -> 16)
       const byDayMap = new Map<number, number>();
@@ -119,7 +119,7 @@ export function createApiMiddleware() {
         todayInvoiceCount: todayOrders.length,
         todayReturns: 0,
         vsYesterdayPct,
-        vsLastMonthPct: 15.78,
+        vsLastMonthPct: 0,
         totalMonthRevenue,
         revenueByDay,
         revenueByHour,
