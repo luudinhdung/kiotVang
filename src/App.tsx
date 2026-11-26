@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { MessageCircle } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { MessageCircle, RefreshCw, ArrowDown } from 'lucide-react';
 import { Navbar, ActiveTab } from './components/Navbar';
 import { DashboardView } from './components/DashboardView';
 import { ProductsView } from './components/ProductsView';
@@ -15,6 +15,9 @@ import {
   CustomerGroup,
   Order
 } from './types';
+
+const PULL_THRESHOLD = 68;
+const MAX_PULL = 115;
 
 export function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
@@ -32,6 +35,12 @@ export function App() {
   // POS / Stock Import Modal State
   const [posModalOpen, setPosModalOpen] = useState(false);
   const [posMode, setPosMode] = useState<'sale' | 'import'>('sale');
+
+  // Pull-to-refresh states for iOS PWA & Mobile
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const touchStartYRef = useRef<number | null>(null);
+  const isPullingRef = useRef(false);
 
   const fetchAllData = useCallback(async () => {
     try {
@@ -59,6 +68,83 @@ export function App() {
     fetchAllData();
   }, [fetchAllData]);
 
+  const performFullRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    setPullDistance(PULL_THRESHOLD);
+    try {
+      await fetchAllData();
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map((r) => r.update()));
+      }
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+    } catch {
+      // ignore cache clear errors
+    }
+    setTimeout(() => {
+      window.location.reload();
+    }, 350);
+  }, [fetchAllData]);
+
+  // Native-feel Pull-to-Refresh touch handlers for iOS & Android
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      if (importModalOpen || posModalOpen || isRefreshing) return;
+      if (window.scrollY <= 5) {
+        touchStartYRef.current = e.touches[0].clientY;
+        isPullingRef.current = false;
+      } else {
+        touchStartYRef.current = null;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (touchStartYRef.current === null || isRefreshing) return;
+      if (window.scrollY > 5) {
+        touchStartYRef.current = null;
+        setPullDistance(0);
+        return;
+      }
+
+      const currentY = e.touches[0].clientY;
+      const diff = currentY - touchStartYRef.current;
+
+      if (diff > 10) {
+        isPullingRef.current = true;
+        // Damped resistance curve like native iOS UIRefreshControl
+        const damped = Math.min(MAX_PULL, Math.pow(diff - 10, 0.78) * 2.2);
+        setPullDistance(damped);
+      } else if (isPullingRef.current) {
+        setPullDistance(0);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (touchStartYRef.current === null || isRefreshing) return;
+      touchStartYRef.current = null;
+
+      if (pullDistance >= PULL_THRESHOLD) {
+        performFullRefresh();
+      } else {
+        setPullDistance(0);
+      }
+      isPullingRef.current = false;
+    };
+
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [importModalOpen, posModalOpen, isRefreshing, pullDistance, performFullRefresh]);
+
   const handleOpenImport = (entity: ImportEntityType) => {
     setImportEntityType(entity);
     setImportModalOpen(true);
@@ -69,6 +155,8 @@ export function App() {
     setPosModalOpen(true);
   };
 
+  const isReadyToRelease = pullDistance >= PULL_THRESHOLD;
+
   return (
     <div className="min-h-screen flex flex-col bg-[#F0F2F5] text-slate-800">
       <Navbar
@@ -76,6 +164,35 @@ export function App() {
         onSelectTab={setActiveTab}
         onOpenPosModal={handleOpenPos}
       />
+
+      {/* Native-style Pull-to-Refresh Indicator */}
+      <div
+        style={{
+          height: `${pullDistance}px`,
+          opacity: pullDistance > 8 ? Math.min(1, pullDistance / 45) : 0
+        }}
+        className="w-full overflow-hidden flex items-center justify-center bg-gradient-to-b from-blue-50/90 to-[#F0F2F5] transition-[height,opacity] duration-150 ease-out select-none"
+      >
+        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-white shadow-md border border-blue-100 text-xs font-semibold text-[#0070F4]">
+          {isRefreshing ? (
+            <>
+              <RefreshCw className="w-4 h-4 animate-spin text-[#0070F4]" />
+              <span>Đang tải lại ứng dụng...</span>
+            </>
+          ) : (
+            <>
+              <ArrowDown
+                className={`w-4 h-4 transition-transform duration-200 ${
+                  isReadyToRelease ? 'rotate-180 text-[#0070F4]' : 'text-slate-500'
+                }`}
+              />
+              <span className={isReadyToRelease ? 'text-[#0070F4]' : 'text-slate-600'}>
+                {isReadyToRelease ? 'Thả tay để tải lại trang' : 'Kéo xuống để làm mới'}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
 
       {/* Safe bottom padding on mobile (pb-24) so Bottom Navigation never overlaps content */}
       <main className="flex-1 pb-24 md:pb-12">
@@ -112,7 +229,7 @@ export function App() {
         )}
       </main>
 
-      {/* Floating KiotViet Support Badge (Desktop only so mobile bottom nav stays clean) */}
+      {/* Floating KiotVạng Support Badge (Desktop only so mobile bottom nav stays clean) */}
       <div className="hidden md:block fixed bottom-3 right-4 z-20">
         <button
           type="button"
