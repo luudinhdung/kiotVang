@@ -876,5 +876,253 @@ export function createApiMiddleware() {
     }
   });
 
+  // Update existing Order (Sale or Import) and recalculate stock & customer debt/sales
+  app.put('/api/orders/:id', (req, res) => {
+    try {
+      const orderId = Number(req.params.id);
+      const existingOrder = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId) as any;
+      if (!existingOrder) {
+        res.status(404).json({ error: 'Không tìm thấy đơn hàng cần sửa!' });
+        return;
+      }
+
+      const {
+        order_type = existingOrder.order_type,
+        customer_id,
+        customer_name = 'Khách lẻ',
+        staff_name = 'Admin',
+        discount = 0,
+        paid_amount,
+        note = '',
+        items = []
+      } = req.body;
+
+      if (!Array.isArray(items) || items.length === 0) {
+        res.status(400).json({ error: 'Đơn hàng phải có ít nhất 1 mặt hàng!' });
+        return;
+      }
+
+      // 1. Revert old items stock impact
+      const oldItems = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(orderId) as any[];
+      const revertSaleStock = db.prepare('UPDATE products SET stock = stock + ? WHERE code = ?');
+      const revertImportStock = db.prepare('UPDATE products SET stock = MAX(0, stock - ?) WHERE code = ?');
+
+      for (const oldIt of oldItems) {
+        if (existingOrder.order_type === 'sale') {
+          revertSaleStock.run(Number(oldIt.quantity || 0), oldIt.product_code);
+        } else {
+          revertImportStock.run(Number(oldIt.quantity || 0), oldIt.product_code);
+        }
+      }
+
+      // 2. Revert old customer sales & debt impact
+      if (existingOrder.order_type === 'sale') {
+        if (existingOrder.customer_id) {
+          db.prepare(`
+            UPDATE customers SET
+              total_sales = MAX(0, total_sales - ?),
+              net_sales = MAX(0, net_sales - ?),
+              current_debt = MAX(0, current_debt - ?)
+            WHERE id = ?
+          `).run(
+            Number(existingOrder.final_amount || 0),
+            Number(existingOrder.final_amount || 0),
+            Number(existingOrder.debt_amount || 0),
+            Number(existingOrder.customer_id)
+          );
+        } else if (existingOrder.customer_name && existingOrder.customer_name !== 'Khách lẻ') {
+          db.prepare(`
+            UPDATE customers SET
+              total_sales = MAX(0, total_sales - ?),
+              net_sales = MAX(0, net_sales - ?),
+              current_debt = MAX(0, current_debt - ?)
+            WHERE name = ?
+          `).run(
+            Number(existingOrder.final_amount || 0),
+            Number(existingOrder.final_amount || 0),
+            Number(existingOrder.debt_amount || 0),
+            existingOrder.customer_name
+          );
+        }
+      }
+
+      // 3. Calculate new totals
+      let totalAmount = 0;
+      for (const item of items) {
+        totalAmount += Number(item.quantity || 1) * Number(item.unit_price || 0);
+      }
+      const finalAmount = Math.max(0, totalAmount - Number(discount || 0));
+      const actualPaid = paid_amount !== undefined ? Number(paid_amount) : finalAmount;
+      const debtAmount = Math.max(0, finalAmount - actualPaid);
+
+      // 4. Update order record
+      db.prepare(`
+        UPDATE orders SET
+          order_type = ?,
+          customer_id = ?,
+          customer_name = ?,
+          staff_name = ?,
+          total_amount = ?,
+          discount = ?,
+          final_amount = ?,
+          paid_amount = ?,
+          debt_amount = ?,
+          note = ?
+        WHERE id = ?
+      `).run(
+        order_type,
+        customer_id || null,
+        customer_name,
+        staff_name,
+        totalAmount,
+        Number(discount || 0),
+        finalAmount,
+        actualPaid,
+        debtAmount,
+        note,
+        orderId
+      );
+
+      // 5. Replace order_items and apply new stock impact
+      db.prepare('DELETE FROM order_items WHERE order_id = ?').run(orderId);
+      const insertItem = db.prepare(`
+        INSERT INTO order_items (
+          order_id, product_id, product_code, product_name, quantity, unit_price, cost_price, subtotal
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      const applySaleStock = db.prepare('UPDATE products SET stock = MAX(0, stock - ?) WHERE code = ?');
+      const applyImportStock = db.prepare(`
+        UPDATE products SET stock = stock + ?, cost_price = CASE WHEN ? > 0 THEN ? ELSE cost_price END WHERE code = ?
+      `);
+
+      for (const item of items) {
+        const qty = Number(item.quantity || 1);
+        const price = Number(item.unit_price || 0);
+        const cost = Number(item.cost_price || price);
+        const subtotal = qty * price;
+
+        insertItem.run(
+          orderId,
+          item.product_id || null,
+          item.product_code,
+          item.product_name,
+          qty,
+          price,
+          cost,
+          subtotal
+        );
+
+        if (order_type === 'sale') {
+          applySaleStock.run(qty, item.product_code);
+        } else {
+          applyImportStock.run(qty, price, price, item.product_code);
+        }
+      }
+
+      // 6. Apply new customer sales & debt impact
+      const nowStr = formatNowVN();
+      if (order_type === 'sale' && customer_id) {
+        db.prepare(`
+          UPDATE customers SET
+            total_sales = total_sales + ?,
+            net_sales = net_sales + ?,
+            current_debt = current_debt + ?,
+            last_transaction_date = ?
+          WHERE id = ?
+        `).run(finalAmount, finalAmount, debtAmount, nowStr.split(' ')[0], Number(customer_id));
+      } else if (order_type === 'sale' && customer_name && customer_name !== 'Khách lẻ') {
+        db.prepare(`
+          UPDATE customers SET
+            total_sales = total_sales + ?,
+            net_sales = net_sales + ?,
+            current_debt = current_debt + ?,
+            last_transaction_date = ?
+          WHERE name = ?
+        `).run(finalAmount, finalAmount, debtAmount, nowStr.split(' ')[0], customer_name);
+      }
+
+      db.prepare(`
+        INSERT INTO activity_logs (staff_name, action_type, action_label, amount, time_ago, created_at)
+        VALUES (?, ?, ?, ?, 'Vừa xong', ?)
+      `).run(
+        staff_name,
+        order_type === 'import' ? 'import' : 'sale',
+        `cập nhật đơn ${existingOrder.code}`,
+        finalAmount,
+        nowStr
+      );
+
+      res.json({
+        success: true,
+        order_id: orderId,
+        code: existingOrder.code,
+        final_amount: finalAmount
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Delete an Order and revert its stock & customer sales/debt impact
+  app.delete('/api/orders/:id', (req, res) => {
+    try {
+      const orderId = Number(req.params.id);
+      const existingOrder = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId) as any;
+      if (!existingOrder) {
+        res.status(404).json({ error: 'Không tìm thấy đơn hàng!' });
+        return;
+      }
+
+      const oldItems = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(orderId) as any[];
+      const revertSaleStock = db.prepare('UPDATE products SET stock = stock + ? WHERE code = ?');
+      const revertImportStock = db.prepare('UPDATE products SET stock = MAX(0, stock - ?) WHERE code = ?');
+
+      for (const oldIt of oldItems) {
+        if (existingOrder.order_type === 'sale') {
+          revertSaleStock.run(Number(oldIt.quantity || 0), oldIt.product_code);
+        } else {
+          revertImportStock.run(Number(oldIt.quantity || 0), oldIt.product_code);
+        }
+      }
+
+      if (existingOrder.order_type === 'sale') {
+        if (existingOrder.customer_id) {
+          db.prepare(`
+            UPDATE customers SET
+              total_sales = MAX(0, total_sales - ?),
+              net_sales = MAX(0, net_sales - ?),
+              current_debt = MAX(0, current_debt - ?)
+            WHERE id = ?
+          `).run(
+            Number(existingOrder.final_amount || 0),
+            Number(existingOrder.final_amount || 0),
+            Number(existingOrder.debt_amount || 0),
+            Number(existingOrder.customer_id)
+          );
+        } else if (existingOrder.customer_name && existingOrder.customer_name !== 'Khách lẻ') {
+          db.prepare(`
+            UPDATE customers SET
+              total_sales = MAX(0, total_sales - ?),
+              net_sales = MAX(0, net_sales - ?),
+              current_debt = MAX(0, current_debt - ?)
+            WHERE name = ?
+          `).run(
+            Number(existingOrder.final_amount || 0),
+            Number(existingOrder.final_amount || 0),
+            Number(existingOrder.debt_amount || 0),
+            existingOrder.customer_name
+          );
+        }
+      }
+
+      db.prepare('DELETE FROM order_items WHERE order_id = ?').run(orderId);
+      db.prepare('DELETE FROM orders WHERE id = ?').run(orderId);
+
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   return app;
 }

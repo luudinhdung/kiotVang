@@ -7,6 +7,7 @@ import { CustomersView } from './components/CustomersView';
 import { OrdersView } from './components/OrdersView';
 import { ExcelImportModal, ImportEntityType } from './components/ExcelImportModal';
 import { PosQuickModal } from './components/PosQuickModal';
+import { InvoicePrintModal } from './components/InvoicePrintModal';
 import {
   DashboardData,
   Product,
@@ -35,6 +36,10 @@ export function App() {
   // POS / Stock Import Modal State
   const [posModalOpen, setPosModalOpen] = useState(false);
   const [posMode, setPosMode] = useState<'sale' | 'import'>('sale');
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+
+  // Desktop Canon Print Simulator Modal State
+  const [printingOrder, setPrintingOrder] = useState<Order | null>(null);
 
   // Pull-to-refresh states for iOS PWA & Mobile
   const [pullDistance, setPullDistance] = useState(0);
@@ -92,7 +97,7 @@ export function App() {
   // Native-feel Pull-to-Refresh touch handlers for iOS & Android
   useEffect(() => {
     const handleTouchStart = (e: TouchEvent) => {
-      if (importModalOpen || posModalOpen || isRefreshing) return;
+      if (importModalOpen || posModalOpen || Boolean(printingOrder) || isRefreshing) return;
       if (window.scrollY <= 5) {
         touchStartYRef.current = e.touches[0].clientY;
         isPullingRef.current = false;
@@ -143,7 +148,7 @@ export function App() {
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [importModalOpen, posModalOpen, isRefreshing, pullDistance, performFullRefresh]);
+  }, [importModalOpen, posModalOpen, printingOrder, isRefreshing, pullDistance, performFullRefresh]);
 
   const handleOpenImport = (entity: ImportEntityType) => {
     setImportEntityType(entity);
@@ -151,7 +156,14 @@ export function App() {
   };
 
   const handleOpenPos = (mode: 'sale' | 'import') => {
+    setEditingOrder(null);
     setPosMode(mode);
+    setPosModalOpen(true);
+  };
+
+  const handleEditOrder = (order: Order) => {
+    setEditingOrder(order);
+    setPosMode(order.order_type);
     setPosModalOpen(true);
   };
 
@@ -225,6 +237,9 @@ export function App() {
           <OrdersView
             orders={orders}
             onOpenPos={handleOpenPos}
+            onEditOrder={handleEditOrder}
+            onRefresh={fetchAllData}
+            onPrintOrder={(order) => setPrintingOrder(order)}
           />
         )}
       </main>
@@ -253,10 +268,22 @@ export function App() {
       <PosQuickModal
         isOpen={posModalOpen}
         initialMode={posMode}
+        editingOrder={editingOrder}
         products={products}
         customers={customers}
-        onClose={() => setPosModalOpen(false)}
+        onClose={() => {
+          setPosModalOpen(false);
+          setEditingOrder(null);
+        }}
         onSuccess={fetchAllData}
+        onPrintOrder={(order) => setPrintingOrder(order)}
+      />
+
+      {/* Desktop Canon Printer Simulator & Invoice Print Modal */}
+      <InvoicePrintModal
+        isOpen={Boolean(printingOrder)}
+        order={printingOrder}
+        onClose={() => setPrintingOrder(null)}
       />
     </div>
   );

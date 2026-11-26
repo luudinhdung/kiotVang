@@ -22,11 +22,9 @@ export function parseSmartNumber(raw: any): number {
   if (typeof raw === 'number') return isNaN(raw) ? 0 : raw;
   const str = String(raw).trim();
   if (!str) return 0;
-  // Remove currency symbols and spaces
   const cleaned = str.replace(/[^\d.,-]/g, '');
   if (!cleaned) return 0;
 
-  // Handle cases like "1,000,000" or "1.000.000"
   const dots = (cleaned.match(/\./g) || []).length;
   const commas = (cleaned.match(/,/g) || []).length;
 
@@ -43,4 +41,62 @@ export function parseSmartNumber(raw: any): number {
     }
   }
   return Number(cleaned.replace(/,/g, '')) || 0;
+}
+
+const DIGITS = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+
+function readTriple(n: number, showZeroHundred: boolean): string {
+  const hundred = Math.floor(n / 100);
+  const ten = Math.floor((n % 100) / 10);
+  const unit = n % 10;
+  let res = '';
+
+  if (hundred > 0 || showZeroHundred) {
+    res += DIGITS[hundred] + ' trăm';
+    if (ten === 0 && unit > 0) {
+      res += ' linh';
+    }
+  }
+
+  if (ten > 1) {
+    res += (res ? ' ' : '') + DIGITS[ten] + ' mươi';
+    if (unit === 1) res += ' mốt';
+    else if (unit === 4) res += ' tư';
+    else if (unit === 5) res += ' lăm';
+    else if (unit > 0) res += ' ' + DIGITS[unit];
+  } else if (ten === 1) {
+    res += (res ? ' ' : '') + 'mười';
+    if (unit === 5) res += ' lăm';
+    else if (unit > 0) res += ' ' + DIGITS[unit];
+  } else if (ten === 0 && unit > 0) {
+    res += (res ? ' ' : '') + DIGITS[unit];
+  }
+
+  return res.trim();
+}
+
+export function numberToVietnameseWords(amount: number): string {
+  const num = Math.round(Math.abs(amount || 0));
+  if (num === 0) return 'Không đồng';
+
+  const units = ['', 'nghìn', 'triệu', 'tỷ', 'nghìn tỷ'];
+  const groups: number[] = [];
+  let temp = num;
+  while (temp > 0) {
+    groups.push(temp % 1000);
+    temp = Math.floor(temp / 1000);
+  }
+
+  const parts: string[] = [];
+  for (let i = groups.length - 1; i >= 0; i--) {
+    const g = groups[i];
+    if (g > 0) {
+      const showZeroHundred = i < groups.length - 1;
+      const text = readTriple(g, showZeroHundred);
+      parts.push(text + (units[i] ? ' ' + units[i] : ''));
+    }
+  }
+
+  const sentence = parts.join(' ').trim();
+  return sentence.charAt(0).toUpperCase() + sentence.slice(1) + ' đồng chẵn.';
 }

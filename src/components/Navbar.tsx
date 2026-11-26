@@ -14,7 +14,8 @@ import {
   Share,
   PlusSquare,
   X,
-  CheckCircle2
+  CheckCircle2,
+  Printer
 } from 'lucide-react';
 
 export type ActiveTab = 'dashboard' | 'products' | 'orders' | 'customers';
@@ -23,12 +24,14 @@ interface NavbarProps {
   activeTab: ActiveTab;
   onSelectTab: (tab: ActiveTab) => void;
   onOpenPosModal: (mode: 'sale' | 'import') => void;
+  onOpenPrintSimulator: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   onSelectTab,
   onOpenPosModal,
+  onOpenPrintSimulator,
 }) => {
   const [isStandalone, setIsStandalone] = useState(false);
   const [showInstallModal, setShowInstallModal] = useState(false);
@@ -117,8 +120,17 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </div>
 
-          {/* Desktop Right Utility Links (Unchanged on Desktop) */}
+          {/* Desktop Right Utility Links (Unchanged on Desktop, with Canon Printer Simulator button) */}
           <div className="hidden md:flex items-center gap-4">
+            <button
+              type="button"
+              onClick={onOpenPrintSimulator}
+              className="flex items-center gap-1.5 text-[#0070F4] bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-md transition-colors font-semibold"
+              title="Mở trình giả lập & cài đặt máy in Canon"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Máy in Canon (Giả lập)</span>
+            </button>
             <button
               type="button"
               onClick={() => onOpenPosModal('import')}
@@ -139,8 +151,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="h-3.5 w-[1px] bg-slate-200" />
             <button
               type="button"
+              onClick={onOpenPrintSimulator}
               className="p-1 hover:bg-slate-100 rounded-full text-slate-600"
-              title="Thiết lập"
+              title="Thiết lập mẫu in"
             >
               <Settings className="w-4 h-4" />
             </button>

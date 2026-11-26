@@ -8,43 +8,78 @@ import {
   Trash2,
   X,
   CheckCircle2,
-  User
+  User,
+  Printer,
+  Edit3
 } from 'lucide-react';
-import { Product, Customer, OrderItem } from '../types';
+import { Product, Customer, Order, OrderItem } from '../types';
 import { formatNumber } from '../utils/format';
 
 interface PosQuickModalProps {
   isOpen: boolean;
   initialMode: 'sale' | 'import';
+  editingOrder?: Order | null;
   products: Product[];
   customers: Customer[];
   onClose: () => void;
   onSuccess: () => void;
+  onPrintOrder?: (order: Order) => void;
 }
 
 export const PosQuickModal: React.FC<PosQuickModalProps> = ({
   isOpen,
   initialMode,
+  editingOrder,
   products,
   customers,
   onClose,
-  onSuccess
+  onSuccess,
+  onPrintOrder
 }) => {
   const [mode, setMode] = useState<'sale' | 'import'>(initialMode);
   const [productSearch, setProductSearch] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
-  const [staffName, setStaffName] = useState('Hoàng Nam Quang');
+  const [staffName, setStaffName] = useState('Admin');
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [discount, setDiscount] = useState<number>(0);
   const [paidAmount, setPaidAmount] = useState<string>('');
   const [note, setNote] = useState('');
+  const [autoPrintOnDesktop, setAutoPrintOnDesktop] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   React.useEffect(() => {
-    setMode(initialMode);
     setErrorMsg(null);
-  }, [initialMode, isOpen]);
+    if (editingOrder && isOpen) {
+      setMode(editingOrder.order_type);
+      setCart(
+        (editingOrder.items || []).map((it) => ({
+          ...it,
+          subtotal: Number(it.quantity) * Number(it.unit_price)
+        }))
+      );
+      setDiscount(Number(editingOrder.discount || 0));
+      setPaidAmount(String(editingOrder.paid_amount ?? editingOrder.final_amount));
+      setStaffName(editingOrder.staff_name || 'Admin');
+      setNote(editingOrder.note || '');
+      setAutoPrintOnDesktop(false);
+
+      if (editingOrder.customer_id) {
+        setSelectedCustomerId(String(editingOrder.customer_id));
+      } else {
+        const matched = customers.find((c) => c.name === editingOrder.customer_name);
+        setSelectedCustomerId(matched ? String(matched.id) : '');
+      }
+    } else if (isOpen) {
+      setMode(initialMode);
+      setCart([]);
+      setDiscount(0);
+      setPaidAmount('');
+      setNote('');
+      setSelectedCustomerId('');
+      setAutoPrintOnDesktop(true);
+    }
+  }, [initialMode, editingOrder, isOpen, customers]);
 
   const matchingProducts = useMemo(() => {
     const q = productSearch.trim().toLowerCase();
@@ -123,30 +158,69 @@ export const PosQuickModal: React.FC<PosQuickModalProps> = ({
     setErrorMsg(null);
     try {
       const selectedCust = customers.find((c) => String(c.id) === selectedCustomerId);
-      const res = await fetch('/api/orders', {
-        method: 'POST',
+      const customerName = selectedCust ? selectedCust.name : 'Khách lẻ';
+      const cartSnapshot = [...cart];
+
+      const endpoint = editingOrder ? `/api/orders/${editingOrder.id}` : '/api/orders';
+      const method = editingOrder ? 'PUT' : 'POST';
+
+      const res = await fetch(endpoint, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           order_type: mode,
           customer_id: selectedCust ? selectedCust.id : undefined,
-          customer_name: selectedCust ? selectedCust.name : 'Khách lẻ',
+          customer_name: customerName,
           staff_name: staffName,
           discount,
           paid_amount: effectivePaid,
           note,
-          items: cart
+          items: cartSnapshot
         })
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Lỗi khi tạo giao dịch');
+        throw new Error(data.error || 'Lỗi khi lưu giao dịch');
       }
+
+      const now = new Date();
+      const createdStr = editingOrder
+        ? editingOrder.created_at
+        : `${String(now.getDate()).padStart(2, '0')}/${String(
+            now.getMonth() + 1
+          ).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(
+            2,
+            '0'
+          )}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+      const savedOrder: Order = {
+        id: data.order_id || editingOrder?.id || Date.now(),
+        code: data.code || editingOrder?.code || 'HD000001',
+        order_type: mode,
+        customer_id: selectedCust?.id,
+        customer_name: customerName,
+        staff_name: staffName,
+        total_amount: totalAmount,
+        discount,
+        final_amount: finalAmount,
+        paid_amount: effectivePaid,
+        debt_amount: debtAmount,
+        note,
+        created_at: createdStr,
+        items: cartSnapshot
+      };
+
       setCart([]);
       setDiscount(0);
       setPaidAmount('');
       setNote('');
       onSuccess();
       onClose();
+
+      // Open Print Simulator on Desktop Web (>=768px) if checked
+      if (autoPrintOnDesktop && window.innerWidth >= 768 && onPrintOrder) {
+        onPrintOrder(savedOrder);
+      }
     } catch (err: any) {
       setErrorMsg(err.message);
     } finally {
@@ -160,13 +234,21 @@ export const PosQuickModal: React.FC<PosQuickModalProps> = ({
         {/* Top Header */}
         <div className="px-4 sm:px-6 py-3.5 bg-[#0070F4] text-white flex items-center justify-between gap-2 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
-            {mode === 'sale' ? (
+            {editingOrder ? (
+              <Edit3 className="w-5 h-5 shrink-0" />
+            ) : mode === 'sale' ? (
               <ShoppingCart className="w-5 h-5 shrink-0" />
             ) : (
               <PackagePlus className="w-5 h-5 shrink-0" />
             )}
             <h3 className="text-sm sm:text-base font-bold truncate">
-              {mode === 'sale' ? 'Bán hàng nhanh (POS)' : 'Nhập hàng vào kho'}
+              {editingOrder
+                ? `Cập nhật ${
+                    mode === 'sale' ? 'Đơn bán hàng' : 'Phiếu nhập kho'
+                  } (${editingOrder.code})`
+                : mode === 'sale'
+                ? 'Bán hàng nhanh (POS)'
+                : 'Nhập hàng vào kho'}
             </h3>
           </div>
 
@@ -244,7 +326,7 @@ export const PosQuickModal: React.FC<PosQuickModalProps> = ({
             {/* 1. MOBILE CART CARDS (<768px: md:hidden) */}
             <div className="md:hidden space-y-2.5">
               <div className="font-bold text-slate-700 text-xs">
-                Danh sách mặt hàng đã chọn ({cart.length}):
+                Danh sách mặt hàng trong đơn ({cart.length}):
               </div>
               {cart.length === 0 ? (
                 <div className="p-6 text-center bg-slate-50 rounded-lg border border-dashed border-slate-300 text-slate-400">
@@ -485,14 +567,12 @@ export const PosQuickModal: React.FC<PosQuickModalProps> = ({
                 <label className="block font-semibold text-slate-700 mb-1">
                   Nhân viên thực hiện
                 </label>
-                <select
+                <input
+                  type="text"
                   value={staffName}
                   onChange={(e) => setStaffName(e.target.value)}
                   className="w-full min-h-[44px] md:min-h-0 border border-slate-300 rounded px-3 py-2 text-base md:text-xs bg-white outline-none"
-                >
-                  <option value="Hoàng Nam Quang">Hoàng Nam Quang</option>
-                  <option value="Nguyễn Lê Hùng Cường">Nguyễn Lê Hùng Cường</option>
-                </select>
+                />
               </div>
 
               <div className="pt-2 border-t border-slate-200 space-y-2.5">
@@ -555,6 +635,18 @@ export const PosQuickModal: React.FC<PosQuickModalProps> = ({
                     className="w-full min-h-[42px] md:min-h-0 border border-slate-300 rounded px-2.5 py-1.5 text-base md:text-xs bg-white outline-none"
                   />
                 </div>
+
+                {/* Desktop-only Auto Print Checkbox */}
+                <label className="hidden md:flex items-center gap-2 pt-2 cursor-pointer text-slate-700 font-semibold">
+                  <input
+                    type="checkbox"
+                    checked={autoPrintOnDesktop}
+                    onChange={(e) => setAutoPrintOnDesktop(e.target.checked)}
+                    className="rounded text-[#0070F4] w-4 h-4"
+                  />
+                  <Printer className="w-3.5 h-3.5 text-[#0070F4]" />
+                  <span>In hóa đơn ngay sau khi lưu (Canon A4/A5)</span>
+                </label>
               </div>
 
               {errorMsg && (
@@ -571,7 +663,11 @@ export const PosQuickModal: React.FC<PosQuickModalProps> = ({
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>
-                {mode === 'sale' ? 'HOÀN TẤT BÁN HÀNG' : 'HOÀN TẤT NHẬP KHO'}
+                {editingOrder
+                  ? `LƯU CẬP NHẬT (${editingOrder.code})`
+                  : mode === 'sale'
+                  ? 'HOÀN TẤT BÁN HÀNG'
+                  : 'HOÀN TẤT NHẬP KHO'}
               </span>
             </button>
           </form>

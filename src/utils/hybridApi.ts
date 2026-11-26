@@ -596,6 +596,134 @@ function handleLocalApi(url: string, options?: RequestInit): Response {
     return jsonRes({ success: true, order_id: newOrder.id, code, final_amount: finalAmount });
   }
 
+  if (url.startsWith('/api/orders/')) {
+    const orderId = Number(url.split('/').pop());
+    const idx = db.orders.findIndex((o) => o.id === orderId);
+    if (idx < 0) {
+      return jsonRes({ error: 'Không tìm thấy đơn hàng!' }, 404);
+    }
+    const existingOrder = db.orders[idx];
+
+    // Helper to revert old order impact on stock & customer
+    const revertOldOrderImpact = () => {
+      for (const oldIt of existingOrder.items || []) {
+        const pIdx = db.products.findIndex((p) => p.code === oldIt.product_code);
+        if (pIdx >= 0) {
+          if (existingOrder.order_type === 'sale') {
+            db.products[pIdx].stock += Number(oldIt.quantity || 0);
+          } else {
+            db.products[pIdx].stock = Math.max(
+              0,
+              db.products[pIdx].stock - Number(oldIt.quantity || 0)
+            );
+          }
+        }
+      }
+      if (existingOrder.order_type === 'sale') {
+        const cIdx = existingOrder.customer_id
+          ? db.customers.findIndex((c) => c.id === Number(existingOrder.customer_id))
+          : db.customers.findIndex((c) => c.name === existingOrder.customer_name);
+        if (cIdx >= 0) {
+          db.customers[cIdx].total_sales = Math.max(
+            0,
+            db.customers[cIdx].total_sales - Number(existingOrder.final_amount || 0)
+          );
+          db.customers[cIdx].net_sales = Math.max(
+            0,
+            db.customers[cIdx].net_sales - Number(existingOrder.final_amount || 0)
+          );
+          db.customers[cIdx].current_debt = Math.max(
+            0,
+            db.customers[cIdx].current_debt - Number(existingOrder.debt_amount || 0)
+          );
+        }
+      }
+    };
+
+    if (method === 'PUT') {
+      revertOldOrderImpact();
+
+      const orderType = body.order_type === 'import' ? 'import' : 'sale';
+      const items: OrderItem[] = body.items || [];
+      const nowStr = formatNowVN();
+
+      const totalAmount = items.reduce(
+        (s, it) => s + Number(it.quantity) * Number(it.unit_price),
+        0
+      );
+      const discount = Number(body.discount || 0);
+      const finalAmount = Math.max(0, totalAmount - discount);
+      const paidAmount = body.paid_amount !== undefined ? Number(body.paid_amount) : finalAmount;
+      const debtAmount = Math.max(0, finalAmount - paidAmount);
+
+      db.orders[idx] = {
+        ...existingOrder,
+        order_type: orderType,
+        customer_id: body.customer_id,
+        customer_name: body.customer_name || 'Khách lẻ',
+        staff_name: body.staff_name || 'Admin',
+        total_amount: totalAmount,
+        discount,
+        final_amount: finalAmount,
+        paid_amount: paidAmount,
+        debt_amount: debtAmount,
+        note: body.note || '',
+        items
+      };
+
+      for (const it of items) {
+        const pIdx = db.products.findIndex((p) => p.code === it.product_code);
+        if (pIdx >= 0) {
+          if (orderType === 'sale') {
+            db.products[pIdx].stock = Math.max(0, db.products[pIdx].stock - Number(it.quantity));
+          } else {
+            db.products[pIdx].stock += Number(it.quantity);
+            if (Number(it.unit_price) > 0) {
+              db.products[pIdx].cost_price = Number(it.unit_price);
+            }
+          }
+        }
+      }
+
+      if (orderType === 'sale') {
+        const cIdx = body.customer_id
+          ? db.customers.findIndex((c) => c.id === Number(body.customer_id))
+          : db.customers.findIndex((c) => c.name === body.customer_name);
+        if (cIdx >= 0) {
+          db.customers[cIdx].total_sales += finalAmount;
+          db.customers[cIdx].net_sales += finalAmount;
+          db.customers[cIdx].current_debt += debtAmount;
+          db.customers[cIdx].last_transaction_date = nowStr.split(' ')[0];
+        }
+      }
+
+      db.activities.unshift({
+        id: Date.now() + 1,
+        staff_name: db.orders[idx].staff_name,
+        action_type: orderType,
+        action_label: `cập nhật đơn ${existingOrder.code}`,
+        amount: finalAmount,
+        time_ago: 'Vừa xong',
+        created_at: nowStr
+      });
+
+      saveDb(db);
+      return jsonRes({
+        success: true,
+        order_id: existingOrder.id,
+        code: existingOrder.code,
+        final_amount: finalAmount
+      });
+    }
+
+    if (method === 'DELETE') {
+      revertOldOrderImpact();
+      db.orders.splice(idx, 1);
+      saveDb(db);
+      return jsonRes({ success: true });
+    }
+  }
+
   return jsonRes({ error: 'Not found' }, 404);
 }
 
