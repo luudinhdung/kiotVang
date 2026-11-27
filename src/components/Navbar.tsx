@@ -15,7 +15,8 @@ import {
   PlusSquare,
   X,
   CheckCircle2,
-  Printer
+  Printer,
+  LogOut
 } from 'lucide-react';
 
 export type ActiveTab = 'dashboard' | 'products' | 'orders' | 'customers';
@@ -24,7 +25,9 @@ interface NavbarProps {
   activeTab: ActiveTab;
   onSelectTab: (tab: ActiveTab) => void;
   onOpenPosModal: (mode: 'sale' | 'import') => void;
-  onOpenPrintSimulator: () => void;
+  onOpenPrintSimulator?: () => void;
+  userEmail?: string;
+  onSignOut?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -32,6 +35,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSelectTab,
   onOpenPosModal,
   onOpenPrintSimulator,
+  userEmail = 'Admin',
+  onSignOut
 }) => {
   const [isStandalone, setIsStandalone] = useState(false);
   const [showInstallModal, setShowInstallModal] = useState(false);
@@ -118,19 +123,31 @@ export const Navbar: React.FC<NavbarProps> = ({
               <ShoppingCart className="w-3.5 h-3.5" />
               <span>Bán hàng</span>
             </button>
+            {onSignOut && (
+              <button
+                type="button"
+                onClick={onSignOut}
+                className="min-h-[38px] px-2 rounded-md bg-slate-100 text-slate-600 hover:text-red-600 border border-slate-200 flex items-center justify-center"
+                title="Đăng xuất"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
           {/* Desktop Right Utility Links (Unchanged on Desktop, with Canon Printer Simulator button) */}
           <div className="hidden md:flex items-center gap-4">
-            <button
-              type="button"
-              onClick={onOpenPrintSimulator}
-              className="flex items-center gap-1.5 text-[#0070F4] bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-md transition-colors font-semibold"
-              title="Mở trình giả lập & cài đặt máy in Canon"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Máy in Canon (Giả lập)</span>
-            </button>
+            {onOpenPrintSimulator && (
+              <button
+                type="button"
+                onClick={onOpenPrintSimulator}
+                className="flex items-center gap-1.5 text-[#0070F4] bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-md transition-colors font-semibold"
+                title="Mở trình giả lập & cài đặt máy in Canon"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Máy in Canon (Giả lập)</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => onOpenPosModal('import')}
@@ -149,20 +166,25 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>Góp ý</span>
             </button>
             <div className="h-3.5 w-[1px] bg-slate-200" />
-            <button
-              type="button"
-              onClick={onOpenPrintSimulator}
-              className="p-1 hover:bg-slate-100 rounded-full text-slate-600"
-              title="Thiết lập mẫu in"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
             <div className="flex items-center gap-2 pl-1">
               <div className="w-6 h-6 rounded-full bg-blue-100 text-[#0070F4] flex items-center justify-center font-semibold">
                 <User className="w-3.5 h-3.5" />
               </div>
-              <span className="font-medium text-slate-700">Admin</span>
+              <span className="font-medium text-slate-700 max-w-[160px] truncate">
+                {userEmail}
+              </span>
             </div>
+            {onSignOut && (
+              <button
+                type="button"
+                onClick={onSignOut}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 font-semibold text-[11px] transition-colors"
+                title="Đăng xuất tài khoản"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Đăng xuất</span>
+              </button>
+            )}
           </div>
         </div>
 

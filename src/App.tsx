@@ -8,6 +8,7 @@ import { OrdersView } from './components/OrdersView';
 import { ExcelImportModal, ImportEntityType } from './components/ExcelImportModal';
 import { PosQuickModal } from './components/PosQuickModal';
 import { InvoicePrintModal } from './components/InvoicePrintModal';
+import { AuthGuard } from './components/AuthGuard';
 import {
   DashboardData,
   Product,
@@ -21,6 +22,22 @@ const PULL_THRESHOLD = 68;
 const MAX_PULL = 115;
 
 export function App() {
+  return (
+    <AuthGuard>
+      {(userEmail, onSignOut) => (
+        <ProtectedKiotVangApp userEmail={userEmail} onSignOut={onSignOut} />
+      )}
+    </AuthGuard>
+  );
+}
+
+function ProtectedKiotVangApp({
+  userEmail,
+  onSignOut
+}: {
+  userEmail: string;
+  onSignOut: () => Promise<void>;
+}) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -71,6 +88,20 @@ export function App() {
 
   useEffect(() => {
     fetchAllData();
+
+    // Auto-sync across devices when user switches back to tab/app or every 12 seconds
+    const handleFocus = () => fetchAllData();
+    window.addEventListener('focus', handleFocus);
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchAllData();
+      }
+    }, 12000);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
   }, [fetchAllData]);
 
   const performFullRefresh = useCallback(async () => {
@@ -175,6 +206,8 @@ export function App() {
         activeTab={activeTab}
         onSelectTab={setActiveTab}
         onOpenPosModal={handleOpenPos}
+        userEmail={userEmail}
+        onSignOut={onSignOut}
       />
 
       {/* Native-style Pull-to-Refresh Indicator */}
